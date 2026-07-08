@@ -1,0 +1,26 @@
+command:
+  - streamlit
+  - run
+  - app/app.py
+
+env:
+  - name: AGENT_CONFIG
+    value: agent-store-ops/agent.yaml
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: 0bf53eaf9b66d1fd
+  - name: DATABRICKS_CATALOG
+    value: bobabricks_demo
+  - name: DATABRICKS_SCHEMA
+    value: store_ops
+  - name: STORETIME_APP_NAME
+    value: bobabricks-storetime-mcp
+  - name: OPSTASK_APP_NAME
+    value: bobabricks-opstask-mcp
+  - name: INVENTORY_APP_MCP_ENABLED
+    value: "false"
+  - name: INVENTORY_APP_NAME
+    value: bobabricks-inventory-mcp
+  - name: CONFLUENCE_MCP_ENABLED
+    value: "false"
+  - name: STREAMLIT_GATHER_USAGE_STATS
+    value: "false"
