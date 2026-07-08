@@ -1,0 +1,26 @@
+name: agent-store-ops
+description: Bobabricks Store Operations Agent for regional risk briefings.
+version: 0.1.0
+
+model:
+  provider: databricks
+  endpoint: unity-ai-gateway://bobabricks-store-ops
+
+system_prompt: ./system_prompt.md
+mcp_servers: ./mcp_servers.yaml
+tools: ./tools.yaml
+policies: ./policies.yaml
+sample_data_dir: ../data
+
+capabilities:
+  - baseline_store_operations_qa
+  - weekly_regional_risk_briefing
+  - inventory_stockout_risk_detection
+  - confluence_goal_and_playbook_lookup
+  - approval_gated_ops_task_creation
+  - lakebase_memory_preferences
+
+app_actions:
+  - id: generate_weekly_regional_briefing
+    label: Generate Weekly Regional Briefing
+    prompt: Generate my weekly regional risk briefing and create follow-up tasks for high-severity items.

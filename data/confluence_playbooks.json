@@ -1,0 +1,16 @@
+{
+  "FY26 Store Operations Goals": {
+    "training_completion_target_pct": 95,
+    "customer_wait_target_minutes": 5,
+    "stockout_prevention": "Escalate likely stockouts above medium risk before the next delivery cutoff."
+  },
+  "Training Completion Operating Standard": {
+    "guidance": "Protected training shifts should not be converted to service coverage except during approved emergency coverage windows."
+  },
+  "Inventory Stockout Escalation Playbook": {
+    "guidance": "For high-risk ingredient stockouts, create an OpsTask for expedited transfer or vendor escalation."
+  },
+  "Pacific Region Weekly Review Playbook": {
+    "guidance": "Briefings should prioritize high-severity risks and include evidence and recommended actions."
+  }
+}

@@ -1,0 +1,15 @@
+For `agent-store-ops`, upgrade the Bobabricks demo from Q&A into a regional risk briefing workflow.
+
+Please implement all of the following:
+1. Add the Atlassian Confluence MCP so the agent can reference FY26 goals and operating playbooks.
+2. Add inventory risk support so the agent can detect likely ingredient stockout risk and use that in root-cause analysis.
+3. Update the agent behavior so every risk briefing classifies each issue into one of: `sales`, `labor`, `inventory`, `training`, `customer_experience`.
+4. Add a weekly regional risk briefing response format with: store, severity, category, evidence, recommended action.
+5. Add approval-gated OpsTask follow-up creation for high-severity risks. The agent must ask permission before creating tasks.
+6. Add a user-facing app action/shortcut: `Generate Weekly Regional Briefing`.
+7. Preserve existing capabilities and redeploy the app.
+
+After changes, show:
+- the key diff summary,
+- the deployed status,
+- and a sample query/output for: `Generate my weekly Pacific regional risk briefing and create follow-up tasks for high-severity items.`

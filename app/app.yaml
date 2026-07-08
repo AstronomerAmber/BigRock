@@ -1,0 +1,14 @@
+name: bobabricks-store-ops-demo
+description: Bobabricks Store Operations Agent app.
+command: streamlit run app.py
+
+environment:
+  AGENT_CONFIG: ../agent-store-ops/agent.yaml
+  DATABRICKS_WAREHOUSE_ID: ${DATABRICKS_WAREHOUSE_ID}
+  ATLASSIAN_CONFLUENCE_URL: ${ATLASSIAN_CONFLUENCE_URL}
+  ATLASSIAN_API_TOKEN: ${ATLASSIAN_API_TOKEN}
+
+actions:
+  - id: generate_weekly_regional_briefing
+    label: Generate Weekly Regional Briefing
+    prompt: Generate my weekly regional risk briefing and create follow-up tasks for high-severity items.

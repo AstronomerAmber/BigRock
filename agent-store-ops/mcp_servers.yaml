@@ -1,0 +1,54 @@
+mcp_servers:
+  genie_agent:
+    type: databricks_genie
+    description: Governed store operations analytics over Bobabricks metrics.
+    config:
+      space_name: bobabricks_store_operations
+      warehouse: ${DATABRICKS_WAREHOUSE_ID}
+
+  storetime:
+    type: custom_mcp
+    description: Labor, scheduling, training shifts, and service coverage diagnostics.
+    command: python3
+    args:
+      - ../scripts/mock_mcp_server.py
+      - storetime
+
+  ops_task:
+    type: custom_mcp
+    description: OpsTask ticket lookup and approval-gated follow-up task creation.
+    command: python3
+    args:
+      - ../scripts/mock_mcp_server.py
+      - ops_task
+
+  confluence:
+    type: atlassian_confluence_mcp
+    description: FY26 goals, operating playbooks, and store procedures.
+    config:
+      server_url: ${ATLASSIAN_CONFLUENCE_URL}
+      auth_token_env: ATLASSIAN_API_TOKEN
+      spaces:
+        - BOBABRICKS_OPS
+        - FY26_GOALS
+      required_pages:
+        - FY26 Store Operations Goals
+        - Training Completion Operating Standard
+        - Inventory Stockout Escalation Playbook
+        - Pacific Region Weekly Review Playbook
+    notes: >-
+      Replace these placeholders with the actual Atlassian MCP server connection used in your Databricks/Omnigent environment. The demo depends on preserving where FY26 goals and operating playbooks are discoverable.
+
+  inventory:
+    type: custom_mcp
+    description: Ingredient availability, depletion forecasts, and likely stockout risk.
+    command: python3
+    args:
+      - ../scripts/mock_mcp_server.py
+      - inventory
+
+  memory:
+    type: lakebase_memory
+    description: User preference and regional context memory.
+    config:
+      table: bobabricks_agent_memory

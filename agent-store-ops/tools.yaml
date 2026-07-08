@@ -1,0 +1,37 @@
+tools:
+  - name: query_store_metrics
+    server: genie_agent
+    purpose: Retrieve sales, training, customer experience, and store performance metrics.
+    read_only: true
+
+  - name: inspect_schedule
+    server: storetime
+    purpose: Inspect labor schedules, training shifts, and rush-window coverage changes.
+    read_only: true
+
+  - name: list_existing_ops_tasks
+    server: ops_task
+    purpose: Find existing operational tickets for a store or issue.
+    read_only: true
+
+  - name: create_ops_task
+    server: ops_task
+    purpose: Create follow-up tickets for approved high-severity risks.
+    read_only: false
+    requires_user_approval: true
+
+  - name: search_confluence
+    server: confluence
+    purpose: Retrieve FY26 goals and operating playbooks.
+    read_only: true
+
+  - name: assess_inventory_risk
+    server: inventory
+    purpose: Detect likely ingredient stockout risks and inventory-driven root causes.
+    read_only: true
+
+  - name: remember_preference
+    server: memory
+    purpose: Store stable user preferences.
+    read_only: false
+    requires_user_approval: false
