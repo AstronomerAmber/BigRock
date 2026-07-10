@@ -465,7 +465,12 @@ def render_fy26_goals_markdown(region: str, engine: StoreOpsEngine) -> str:
     )
 
 
-def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: list[dict]) -> str:
+def render_live_tool_registry(
+    region: str,
+    engine: StoreOpsEngine,
+    status_rows: list[dict],
+    persist_to_session: bool = True,
+) -> str:
     checks = []
 
     try:
@@ -532,7 +537,8 @@ def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: 
         }
     )
 
-    st.session_state["tool_status"] = checks
+    if persist_to_session:
+        st.session_state["tool_status"] = checks
     lines = [
         "Here are the Bobabricks tools attached to this demo:",
         "",
@@ -701,18 +707,26 @@ def run_openai_agents_sdk_response(
         return None
 
     try:
-        from agents import Agent, Runner, function_tool, set_default_openai_api, set_default_openai_client
+        from agents import (
+            Agent,
+            Runner,
+            function_tool,
+            set_default_openai_api,
+            set_default_openai_client,
+            set_tracing_disabled,
+        )
         from databricks_openai import AsyncDatabricksOpenAI
     except Exception:
         return None
 
     set_default_openai_client(AsyncDatabricksOpenAI())
     set_default_openai_api("chat_completions")
+    set_tracing_disabled(True)
 
     @function_tool
     def check_available_tools() -> str:
         """Actively check Bobabricks tool/resource reachability and return tool names and status."""
-        return render_live_tool_registry(selected_region, engine, status_rows)
+        return render_live_tool_registry(selected_region, engine, status_rows, persist_to_session=False)
 
     @function_tool
     def compare_training_hours() -> str:
