@@ -1,0 +1,13 @@
+command:
+  - gunicorn
+  - --bind
+  - 0.0.0.0:8000
+  - app:server.app
+
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: 0bf53eaf9b66d1fd
+  - name: DATABRICKS_CATALOG
+    value: bobabricks_demo
+  - name: DATABRICKS_SCHEMA
+    value: store_ops
