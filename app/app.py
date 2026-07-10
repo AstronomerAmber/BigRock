@@ -85,6 +85,9 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
     if "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind")):
         return render_training_hours_markdown(selected_region, engine)
 
+    if "fy26" in lowered or "goal" in lowered or "standard" in lowered:
+        return render_fy26_goals_markdown(selected_region, engine)
+
     if "weekly" in lowered and "briefing" in lowered:
         existing_tasks = ops_tasks.list_tasks()
         issues = engine.build_weekly_briefing(selected_region)
@@ -99,14 +102,6 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
             "That is a completion/utilization issue, not a scheduling issue.\n\n"
             "StoreTime evidence should show converted training hours and a rush-window coverage reason. "
             "The right follow-up is to protect non-rush training blocks and only create an OpsTask after approval."
-        )
-
-    if "fy26" in lowered or "goal" in lowered or "standard" in lowered:
-        return (
-            "For the FY26 operating standards demo, I would ground the answer in the Bobabricks Confluence page, "
-            "then compare each store against the Genie training and execution signals.\n\n"
-            "For Store 104, the key gap is training completion. It is not enough to schedule training hours; the "
-            "store needs protected completion time and manager follow-through."
         )
 
     if "create tasks" in lowered or "now create" in lowered:
@@ -419,6 +414,52 @@ def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
         lines.extend(["", "**Flagged stores:** none."])
 
     return "\n".join(lines)
+
+
+def render_fy26_goals_markdown(region: str, engine: StoreOpsEngine) -> str:
+    playbooks = engine.data_store.playbooks()
+    goals = playbooks["FY26 Store Operations Goals"]
+    training_standard = playbooks["Training Completion Operating Standard"]["guidance"]
+    target_training = float(goals["training_completion_target_pct"])
+    target_wait = float(goals["customer_wait_target_minutes"])
+    metrics = engine.data_store.store_metrics(region)
+    schedules = engine.data_store.schedules()
+    store_104 = next((row for row in metrics if str(row["store_id"]) == "104"), None)
+    schedule_104 = schedules.get("104", {})
+
+    if not store_104:
+        return (
+            "I found the FY26 goals in Confluence, but Store 104 is not in the selected region. "
+            "Switch the region to Pacific to compare Store 104."
+        )
+
+    completion = float(store_104["training_completion_pct"])
+    gap = target_training - completion
+    completed_hours = float(schedule_104.get("completed_training_hours") or 0)
+    scheduled_hours = float(schedule_104.get("scheduled_training_hours") or 0)
+    converted_hours = float(schedule_104.get("converted_training_hours") or 0)
+    conversion_reason = schedule_104.get("conversion_reason") or "none"
+
+    return "\n".join(
+        [
+            "### FY26 training goals and Store 104",
+            "",
+            "**Confluence operating standard**",
+            f"- Training completion target: **{target_training:.0f}%**.",
+            f"- Customer wait target: **{target_wait:.0f} minutes**.",
+            f"- Training standard: {training_standard}",
+            "",
+            "**Store 104 comparison**",
+            f"- Store 104 training completion is **{completion:.0f}%**, which is **{gap:.0f} points below** the FY26 target.",
+            f"- StoreTime shows **{completed_hours:.0f} of {scheduled_hours:.0f}** scheduled training hours completed.",
+            f"- **{converted_hours:.0f} hours** were converted to service coverage for **{conversion_reason}**.",
+            "",
+            "**Answer**",
+            "Store 104 is not missing scheduled training capacity; it is losing protected training time to service coverage. "
+            "That makes this a completion/utilization problem. The right next step is to protect the training blocks and, "
+            "if you approve, create an OpsTask follow-up for the Store 104 manager.",
+        ]
+    )
 
 
 def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: list[dict]) -> str:
