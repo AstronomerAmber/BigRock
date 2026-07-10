@@ -80,15 +80,7 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
     st.session_state["created_tasks"] = []
 
     if "tool" in lowered and "weekly" not in lowered:
-        st.session_state["tool_status"] = status_rows
-        tools = "\n".join(f"- {row['tool']} ({row['status']}): {row['purpose']}" for row in status_rows)
-        return (
-            "I have these Bobabricks demo tools attached:\n\n"
-            f"{tools}\n\n"
-            "Genie handles store operations analytics, StoreTime supplies schedule and training evidence, "
-            "OpsTask is approval-gated for follow-up creation, Confluence supplies the operating standards, "
-            "and Lakebase stores demo preferences."
-        )
+        return render_live_tool_registry(selected_region, engine, status_rows)
 
     if "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind")):
         return render_training_hours_markdown(selected_region, engine)
@@ -218,6 +210,26 @@ class JsonRpcMcpResourceClient:
             return {}
         text = content[0].get("text", "{}")
         return json.loads(text)
+
+    def list_tools(self) -> list[dict]:
+        headers = self.workspace.config.authenticate()
+        headers["Content-Type"] = "application/json"
+        response = requests.post(
+            self.url,
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": str(uuid.uuid4()),
+                "method": "tools/list",
+                "params": {},
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if "error" in payload:
+            raise RuntimeError(payload["error"].get("message", payload["error"]))
+        return payload.get("result", {}).get("tools", [])
 
 
 class DirectStoreOpsDataStore(LocalDataStore):
@@ -409,6 +421,85 @@ def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
     return "\n".join(lines)
 
 
+def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: list[dict]) -> str:
+    checks = []
+
+    try:
+        metrics = engine.data_store.store_metrics(region)
+        checks.append(
+            {
+                "tool": "Genie/data resource",
+                "status": "reachable",
+                "purpose": "governed store metrics and first-pass inventory",
+                "evidence": f"Queried {len(metrics)} {region} store metric rows.",
+            }
+        )
+    except Exception as exc:
+        checks.append(
+            {
+                "tool": "Genie/data resource",
+                "status": "unreachable",
+                "purpose": "governed store metrics and first-pass inventory",
+                "evidence": exc.__class__.__name__,
+            }
+        )
+
+    for label, url in (("StoreTime", STORETIME_MCP_URL), ("OpsTask", OPSTASK_MCP_URL)):
+        try:
+            tools = JsonRpcMcpResourceClient(url).list_tools()
+            names = ", ".join(tool.get("name", "unknown") for tool in tools)
+            checks.append(
+                {
+                    "tool": label,
+                    "status": "reachable",
+                    "purpose": "MCP app resource",
+                    "evidence": f"tools/list returned: {names or 'no tools'}",
+                }
+            )
+        except Exception as exc:
+            checks.append(
+                {
+                    "tool": label,
+                    "status": "unreachable",
+                    "purpose": "MCP app resource",
+                    "evidence": exc.__class__.__name__,
+                }
+            )
+
+    confluence_enabled = os.getenv("CONFLUENCE_MCP_ENABLED", "true").lower() == "true"
+    atlassian_url = os.getenv("ATLASSIAN_MCP_URL", "")
+    checks.append(
+        {
+            "tool": "Confluence",
+            "status": "configured" if confluence_enabled and atlassian_url else "not configured",
+            "purpose": "FY26 goals and playbooks",
+            "evidence": "Atlassian MCP URL configured." if atlassian_url else "No Atlassian MCP URL in app env.",
+        }
+    )
+
+    checks.append(
+        {
+            "tool": "Lakebase memory",
+            "status": "reachable" if memory_status.enabled else "unreachable",
+            "purpose": "stable user preferences",
+            "evidence": memory_status.message,
+        }
+    )
+
+    st.session_state["tool_status"] = checks
+    lines = [
+        "I actively checked these Bobabricks tools:",
+        "",
+        "| Tool | Live status | What it does | Check result |",
+        "|---|---|---|---|",
+    ]
+    for check in checks:
+        lines.append(
+            f"| {check['tool']} | {check['status']} | {check['purpose']} | {check['evidence']} |"
+        )
+    return "\n".join(lines)
+
+
 def stream_mas(messages: list[dict]):
     workspace = get_workspace_client()
     url = f"{workspace.config.host.rstrip('/')}/serving-endpoints/{MAS_ENDPOINT_NAME}/invocations"
@@ -540,7 +631,7 @@ def local_tool_response(
     return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
 
 
-data_store, ops_tasks, direct_resources_enabled = build_resource_clients()
+data_store, ops_tasks, _direct_resources_enabled = build_resource_clients()
 engine = StoreOpsEngine(data_store)
 memory = LakebaseMemoryClient()
 
@@ -554,8 +645,6 @@ if "conversation_id" not in st.session_state:
 
 selected_region = st.session_state.selected_region
 status_rows = engine.tool_status()
-enabled_count = sum(row["status"] in {"configured", "enabled", "approval-gated"} for row in status_rows)
-high_count = sum(issue.severity == "high" for issue in engine.build_weekly_briefing(selected_region))
 memory_status = memory.status()
 memory.remember_preference("demo_user", "selected_region", selected_region)
 
@@ -606,13 +695,6 @@ with st.sidebar:
     )
     st.session_state.selected_region = selected_region
     st.caption("Region preference is written to Lakebase when available.")
-
-    st.divider()
-    st.markdown("**Runtime**")
-    st.metric("Execution", "Direct resources" if direct_resources_enabled else "Local fallback")
-    st.metric("Active tools", f"{enabled_count}/{len(status_rows)}")
-    st.metric("Open high risks", high_count)
-    st.metric("Approval policy", "Required")
 
     st.divider()
     st.markdown("**Connected tools**")
