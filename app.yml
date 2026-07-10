@@ -10,8 +10,6 @@ command:
 env:
   - name: AGENT_CONFIG
     value: agent-store-ops/agent.yaml
-  - name: MAS_ENDPOINT_NAME
-    value: mas-994e0d40-endpoint
   - name: DATABRICKS_WAREHOUSE_ID
     value: 0bf53eaf9b66d1fd
   - name: DATABRICKS_CATALOG
@@ -40,7 +38,5 @@ env:
     value: "true"
   - name: ATLASSIAN_MCP_URL
     value: https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282
-  - name: ATLASSIAN_MCP_BEARER_TOKEN
-    valueFrom: atlassian_mcp_bearer_token
   - name: STREAMLIT_GATHER_USAGE_STATS
     value: "false"

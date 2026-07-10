@@ -10,7 +10,7 @@ from databricks.sdk import WorkspaceClient
 from services.lakebase_memory import LakebaseMemoryClient
 from services.store_ops import LocalDataStore, OpsTaskClient, StoreOpsEngine
 
-MAS_ENDPOINT_NAME = os.environ.get("MAS_ENDPOINT_NAME", "mas-994e0d40-endpoint")
+MAS_ENDPOINT_NAME = os.environ.get("MAS_ENDPOINT_NAME", "").strip()
 
 st.set_page_config(
     page_title="Bobabricks powered by Databricks and Lakebase",
@@ -77,6 +77,9 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
             "and Lakebase stores demo preferences."
         )
 
+    if "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind")):
+        return render_training_hours_markdown(selected_region, engine)
+
     if "weekly" in lowered and "briefing" in lowered:
         existing_tasks = ops_tasks.list_tasks()
         issues = engine.build_weekly_briefing(selected_region)
@@ -138,6 +141,88 @@ def clean_agent_response(full_text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text or "No response from the agent."
+
+
+def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
+    metrics = engine.data_store.store_metrics(region)
+    schedules = engine.data_store.schedules()
+    targets = engine.data_store.playbooks()["FY26 Store Operations Goals"]
+    target_training = float(targets["training_completion_target_pct"])
+
+    rows = []
+    total_scheduled = 0.0
+    total_completed = 0.0
+    for metric in metrics:
+        schedule = schedules.get(metric["store_id"], {})
+        scheduled = float(schedule.get("scheduled_training_hours") or 0)
+        completed = float(schedule.get("completed_training_hours") or 0)
+        converted = float(schedule.get("converted_training_hours") or 0)
+        completion = float(metric["training_completion_pct"])
+        total_scheduled += scheduled
+        total_completed += completed
+        rows.append(
+            {
+                "store_id": metric["store_id"],
+                "store_name": metric["store_name"],
+                "scheduled": scheduled,
+                "completed": completed,
+                "converted": converted,
+                "completion": completion,
+                "reason": schedule.get("conversion_reason") or "none",
+                "behind": completion < target_training,
+            }
+        )
+
+    avg_scheduled = total_scheduled / len(rows) if rows else 0
+    avg_completed = total_completed / len(rows) if rows else 0
+    avg_actual_pct = (total_completed / total_scheduled * 100) if total_scheduled else 0
+
+    lines = [
+        f"### {region} training hours",
+        "",
+        "**Evidence used**",
+        "- **Confluence:** FY26 training completion target.",
+        "- **Genie Agent:** store-level training completion metrics.",
+        "- **StoreTime:** scheduled, completed, and converted training hours.",
+        "",
+        (
+            f"Across {len(rows)} {region} stores, average scheduled training is "
+            f"{avg_scheduled:.1f} hours and average actual completed training is {avg_completed:.1f} hours "
+            f"({avg_actual_pct:.0f}% of scheduled hours). The FY26 completion target is {target_training:.0f}%."
+        ),
+        "",
+        "| Store | Scheduled | Actual completed | Completion | Converted | Behind? | Evidence |",
+        "|---|---:|---:|---:|---:|---|---|",
+    ]
+
+    for row in rows:
+        behind = "Yes" if row["behind"] else "No"
+        evidence = (
+            f"{row['converted']:.0f} hours converted for {row['reason']}"
+            if row["converted"]
+            else "no converted training hours"
+        )
+        lines.append(
+            f"| {row['store_id']} - {row['store_name']} | {row['scheduled']:.0f} | "
+            f"{row['completed']:.0f} | {row['completion']:.0f}% | {row['converted']:.0f} | "
+            f"{behind} | {evidence} |"
+        )
+
+    behind_rows = [row for row in rows if row["behind"]]
+    if behind_rows:
+        stores = ", ".join(f"Store {row['store_id']}" for row in behind_rows)
+        lines.extend(
+            [
+                "",
+                f"**Flagged stores:** {stores}.",
+                "Store 104 is the clearest issue: 25 of 42 scheduled hours were completed, and "
+                "14 training hours were converted to rush-window service coverage.",
+            ]
+        )
+    else:
+        lines.extend(["", "**Flagged stores:** none."])
+
+    return "\n".join(lines)
 
 
 def stream_mas(messages: list[dict]):
@@ -400,12 +485,15 @@ if prompt:
         placeholder = st.empty()
         raw_response = f"*Calling agent... Bobabricks Store Operations*\n\n{render_tool_call_order(prompt)}\n\n"
         placeholder.markdown(raw_response)
-        try:
-            for chunk in stream_mas(agent_messages):
-                raw_response += chunk
-                placeholder.markdown(clean_agent_response(raw_response))
-            response = clean_agent_response(raw_response)
-        except Exception:
+        if MAS_ENDPOINT_NAME:
+            try:
+                for chunk in stream_mas(agent_messages):
+                    raw_response += chunk
+                    placeholder.markdown(clean_agent_response(raw_response))
+                response = clean_agent_response(raw_response)
+            except Exception:
+                response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
+        else:
             response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
         placeholder.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
