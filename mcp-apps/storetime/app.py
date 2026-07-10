@@ -72,6 +72,8 @@ server = JsonRpcMcpApp(
     ],
 )
 
+app = server.app
+
 
 if __name__ == "__main__":
     server.run()

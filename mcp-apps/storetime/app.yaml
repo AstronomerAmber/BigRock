@@ -2,7 +2,7 @@ command:
   - gunicorn
   - --bind
   - 0.0.0.0:8000
-  - app:server.app
+  - app:app
 
 env:
   - name: DATABRICKS_WAREHOUSE_ID
