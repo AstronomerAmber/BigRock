@@ -1,54 +1,68 @@
 mcp_servers:
   genie_agent:
     type: databricks_genie
-    description: Governed store operations analytics over Bobabricks metrics.
+    description: Governed store operations analytics over Bobabricks metrics, including first-pass inventory facts.
     config:
       space_name: bobabricks_store_operations
       warehouse: ${DATABRICKS_WAREHOUSE_ID}
+      catalogs:
+        - ${DATABRICKS_CATALOG:-bobabricks_demo}
+      schemas:
+        - ${DATABRICKS_SCHEMA:-store_ops}
 
   storetime:
-    type: custom_mcp
-    description: Labor, scheduling, training shifts, and service coverage diagnostics.
-    command: python3
-    args:
-      - ../scripts/mock_mcp_server.py
-      - storetime
+    type: databricks_app_mcp
+    description: StoreTime labor, scheduling, training-shift, and service coverage diagnostics backed by demo Delta tables.
+    config:
+      app_name: ${STORETIME_APP_NAME:-bobabricks-storetime-mcp}
+      endpoint_path: /mcp
+      tables:
+        schedules: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.schedules
+        training_events: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.training_events
 
   ops_task:
-    type: custom_mcp
-    description: OpsTask ticket lookup and approval-gated follow-up task creation.
-    command: python3
-    args:
-      - ../scripts/mock_mcp_server.py
-      - ops_task
+    type: databricks_app_mcp
+    description: OpsTask ticket lookup and approval-gated follow-up task creation backed by demo Delta tables.
+    config:
+      app_name: ${OPSTASK_APP_NAME:-bobabricks-opstask-mcp}
+      endpoint_path: /mcp
+      tables:
+        ops_tasks: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.ops_tasks
 
   confluence:
-    type: atlassian_confluence_mcp
+    type: managed_atlassian_mcp
+    enabled: ${CONFLUENCE_MCP_ENABLED:-true}
     description: FY26 goals, operating playbooks, and store procedures.
     config:
-      server_url: ${ATLASSIAN_CONFLUENCE_URL}
-      auth_token_env: ATLASSIAN_API_TOKEN
+      server_url: ${ATLASSIAN_MCP_URL:-https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282}
+      http_headers:
+        Authorization: Bearer ${ATLASSIAN_MCP_BEARER_TOKEN}
       spaces:
-        - BOBABRICKS_OPS
-        - FY26_GOALS
+        - "~7120205a9b4c00e0154b0694abeb4e6b2c89bb"
       required_pages:
-        - FY26 Store Operations Goals
+        - Bobabricks — FY26 Store Operations Goals & Operating Standards
         - Training Completion Operating Standard
         - Inventory Stockout Escalation Playbook
         - Pacific Region Weekly Review Playbook
+      required_page_urls:
+        - https://databricks.atlassian.net/wiki/x/gACwhwE
     notes: >-
-      Replace these placeholders with the actual Atlassian MCP server connection used in your Databricks/Omnigent environment. The demo depends on preserving where FY26 goals and operating playbooks are discoverable.
+      Enabled for the deployed demo so the agent can retrieve company goals and operating playbooks through the managed Atlassian MCP. Set CONFLUENCE_MCP_ENABLED=false only for local rehearsals that intentionally show a company-context gap.
 
-  inventory:
-    type: custom_mcp
-    description: Ingredient availability, depletion forecasts, and likely stockout risk.
-    command: python3
-    args:
-      - ../scripts/mock_mcp_server.py
-      - inventory
+  inventory_app:
+    type: databricks_app_mcp
+    enabled: ${INVENTORY_APP_MCP_ENABLED:-true}
+    description: Optional final-pass Inventory MCP for ingredient availability, depletion forecasts, and likely stockout risk.
+    config:
+      app_name: ${INVENTORY_APP_NAME:-bobabricks-inventory-mcp}
+      endpoint_path: /mcp
+      tables:
+        inventory: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.inventory
+    notes: >-
+      Enabled for the deployed demo so Inventory appears as its own operational tool for ingredient availability, depletion forecasts, and stockout risk. Genie remains the governed analytics path for first-pass inventory facts.
 
   memory:
     type: lakebase_memory
     description: User preference and regional context memory.
     config:
-      table: bobabricks_agent_memory
+      table: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.bobabricks_agent_memory

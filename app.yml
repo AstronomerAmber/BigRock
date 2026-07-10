@@ -2,25 +2,43 @@ command:
   - streamlit
   - run
   - app/app.py
+  - --server.port
+  - "8000"
+  - --server.enableCORS
+  - "false"
 
 env:
   - name: AGENT_CONFIG
     value: agent-store-ops/agent.yaml
+  - name: MAS_ENDPOINT_NAME
+    value: mas-994e0d40-endpoint
   - name: DATABRICKS_WAREHOUSE_ID
     value: 0bf53eaf9b66d1fd
   - name: DATABRICKS_CATALOG
     value: bobabricks_demo
   - name: DATABRICKS_SCHEMA
     value: store_ops
+  - name: LAKEBASE_ENDPOINT
+    value: projects/bobabricks/branches/production/endpoints/primary
+  - name: LAKEBASE_HOST
+    value: ep-misty-cloud-d1p5nild.database.us-west-2.cloud.databricks.com
+  - name: LAKEBASE_DATABASE_NAME
+    value: databricks_postgres
+  - name: LAKEBASE_MEMORY_SCHEMA
+    value: bobabricks_app
   - name: STORETIME_APP_NAME
     value: bobabricks-storetime-mcp
   - name: OPSTASK_APP_NAME
     value: bobabricks-opstask-mcp
   - name: INVENTORY_APP_MCP_ENABLED
-    value: "false"
+    value: "true"
   - name: INVENTORY_APP_NAME
     value: bobabricks-inventory-mcp
   - name: CONFLUENCE_MCP_ENABLED
-    value: "false"
+    value: "true"
+  - name: ATLASSIAN_MCP_URL
+    value: https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282
+  - name: ATLASSIAN_MCP_BEARER_TOKEN
+    valueFrom: atlassian_mcp_bearer_token
   - name: STREAMLIT_GATHER_USAGE_STATS
     value: "false"

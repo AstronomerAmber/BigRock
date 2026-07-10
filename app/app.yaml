@@ -1,12 +1,47 @@
-name: bobabricks-store-ops-demo
-description: Bobabricks Store Operations Agent app.
-command: streamlit run app.py
+command:
+  - streamlit
+  - run
+  - app.py
+  - --server.port
+  - "8000"
+  - --server.enableCORS
+  - "false"
 
-environment:
-  AGENT_CONFIG: ../agent-store-ops/agent.yaml
-  DATABRICKS_WAREHOUSE_ID: ${DATABRICKS_WAREHOUSE_ID}
-  ATLASSIAN_CONFLUENCE_URL: ${ATLASSIAN_CONFLUENCE_URL}
-  ATLASSIAN_API_TOKEN: ${ATLASSIAN_API_TOKEN}
+env:
+  - name: AGENT_CONFIG
+    value: ../agent-store-ops/agent.yaml
+  - name: MAS_ENDPOINT_NAME
+    value: mas-994e0d40-endpoint
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql_warehouse
+  - name: DATABRICKS_CATALOG
+    value: bobabricks_demo
+  - name: DATABRICKS_SCHEMA
+    value: store_ops
+  - name: LAKEBASE_ENDPOINT
+    value: projects/bobabricks/branches/production/endpoints/primary
+  - name: LAKEBASE_HOST
+    value: ep-misty-cloud-d1p5nild.database.us-west-2.cloud.databricks.com
+  - name: LAKEBASE_DATABASE_NAME
+    value: databricks_postgres
+  - name: LAKEBASE_MEMORY_SCHEMA
+    value: bobabricks_app
+  - name: STORETIME_APP_NAME
+    value: bobabricks-storetime-mcp
+  - name: OPSTASK_APP_NAME
+    value: bobabricks-opstask-mcp
+  - name: INVENTORY_APP_MCP_ENABLED
+    value: "true"
+  - name: INVENTORY_APP_NAME
+    value: bobabricks-inventory-mcp
+  - name: CONFLUENCE_MCP_ENABLED
+    value: "true"
+  - name: ATLASSIAN_MCP_URL
+    value: https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282
+  - name: ATLASSIAN_MCP_BEARER_TOKEN
+    valueFrom: atlassian_mcp_bearer_token
+  - name: STREAMLIT_GATHER_USAGE_STATS
+    value: "false"
 
 actions:
   - id: generate_weekly_regional_briefing
