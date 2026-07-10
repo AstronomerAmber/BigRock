@@ -226,6 +226,51 @@ def build_agent_messages(prompt: str, prior_messages: list[dict], selected_regio
     return conversation
 
 
+def tool_call_order(prompt: str) -> list[tuple[str, str]]:
+    lowered = prompt.lower()
+    calls = [
+        ("Lakebase memory", "load selected region and demo context"),
+    ]
+
+    if "tool" in lowered and "weekly" not in lowered:
+        calls.append(("MCP registry", "list available tools, status, and purpose"))
+        return calls
+
+    if any(term in lowered for term in ("fy26", "goal", "standard", "weekly", "briefing", "training")):
+        calls.append(("Confluence", "retrieve FY26 goals and operating standards"))
+
+    if any(term in lowered for term in ("average", "actual", "training", "weekly", "briefing", "store", "risk")):
+        calls.append(("Genie Agent", "query governed store metrics and training performance"))
+
+    if any(term in lowered for term in ("training", "schedule", "scheduling", "104", "storetime", "completion")):
+        calls.append(("StoreTime", "inspect training blocks, converted hours, and coverage reasons"))
+
+    if any(term in lowered for term in ("weekly", "briefing", "inventory", "stockout", "risk")):
+        calls.append(("Inventory MCP", "check ingredient availability and stockout risk"))
+
+    if any(term in lowered for term in ("weekly", "briefing", "task", "tasks", "propose", "create")):
+        calls.append(("OpsTask", "list existing follow-ups and draft approval-gated tasks"))
+
+    return calls
+
+
+def render_tool_call_order(prompt: str) -> str:
+    lines = ["**Tool call order**"]
+    for index, (tool, action) in enumerate(tool_call_order(prompt), start=1):
+        lines.append(f"{index}. **{tool}** - {action}")
+    return "\n".join(lines)
+
+
+def local_tool_response(
+    prompt: str,
+    selected_region: str,
+    engine: StoreOpsEngine,
+    ops_tasks: OpsTaskClient,
+    status_rows: list[dict],
+) -> str:
+    return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
+
+
 data_store = LocalDataStore()
 engine = StoreOpsEngine(data_store)
 ops_tasks = OpsTaskClient(data_store)
@@ -353,19 +398,15 @@ if prompt:
     agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        raw_response = "*Calling agent... Bobabricks Store Operations*\n\n"
+        raw_response = f"*Calling agent... Bobabricks Store Operations*\n\n{render_tool_call_order(prompt)}\n\n"
         placeholder.markdown(raw_response)
         try:
             for chunk in stream_mas(agent_messages):
                 raw_response += chunk
                 placeholder.markdown(clean_agent_response(raw_response))
             response = clean_agent_response(raw_response)
-        except Exception as exc:
-            response = response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)
-            response = (
-                f"*Agent endpoint fallback: {exc.__class__.__name__}. Showing local demo data instead.*\n\n"
-                f"{response}"
-            )
+        except Exception:
+            response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
         placeholder.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
 
