@@ -636,8 +636,9 @@ engine = StoreOpsEngine(data_store)
 memory = LakebaseMemoryClient()
 
 regions = data_store.regions()
+region_options = sorted(set(regions) | {"Pacific", "Mountain", "Atlantic"})
 if "selected_region" not in st.session_state:
-    st.session_state.selected_region = "Pacific" if "Pacific" in regions else regions[0]
+    st.session_state.selected_region = "Pacific" if "Pacific" in region_options else region_options[0]
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "conversation_id" not in st.session_state:
@@ -689,8 +690,8 @@ with st.sidebar:
     st.markdown("**Region**")
     selected_region = st.selectbox(
         "Region",
-        regions,
-        index=regions.index(st.session_state.selected_region),
+        region_options,
+        index=region_options.index(st.session_state.selected_region),
         label_visibility="collapsed",
     )
     st.session_state.selected_region = selected_region
@@ -717,11 +718,8 @@ with st.sidebar:
 examples = [
     "What tools do you have?",
     f"Show average versus actual training hours for my {selected_region} stores and flag any stores falling behind.",
-    "Why is Store 104 behind on training? Is it a scheduling problem or a completion problem?",
     "What are our FY26 training goals, and how does Store 104 stack up?",
     f"Generate my weekly {selected_region} regional risk briefing and create follow-up tasks for high-severity items.",
-    "Propose actions only; do not create tasks yet.",
-    "Now create tasks for high-severity items.",
 ]
 
 for msg in st.session_state.messages:
