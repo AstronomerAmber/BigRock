@@ -20,6 +20,8 @@ env:
     value: store_ops
   - name: LAKEBASE_ENDPOINT
     value: projects/bobabricks/branches/production/endpoints/primary
+  - name: LAKEBASE_INSTANCE_NAME
+    value: bobabricks
   - name: LAKEBASE_HOST
     value: ep-misty-cloud-d1p5nild.database.us-west-2.cloud.databricks.com
   - name: LAKEBASE_DATABASE_NAME

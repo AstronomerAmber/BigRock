@@ -18,6 +18,7 @@ class LakebaseMemoryStatus:
 
 class LakebaseMemoryClient:
     def __init__(self):
+        self.instance_name = os.getenv("LAKEBASE_INSTANCE_NAME", "bobabricks")
         self.endpoint = os.getenv("LAKEBASE_ENDPOINT", "")
         self.host = os.getenv("LAKEBASE_HOST", "")
         self.database = os.getenv("LAKEBASE_DATABASE_NAME", "databricks_postgres")
