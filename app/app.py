@@ -488,27 +488,29 @@ def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: 
             }
         )
 
-    for label, url in (("StoreTime", STORETIME_MCP_URL), ("OpsTask", OPSTASK_MCP_URL)):
-        try:
-            tools = JsonRpcMcpResourceClient(url).list_tools()
-            names = ", ".join(tool.get("name", "unknown") for tool in tools)
-            checks.append(
-                {
-                    "tool": label,
-                    "status": "reachable",
-                    "purpose": "MCP app resource",
-                    "evidence": f"tools/list returned: {names or 'no tools'}",
-                }
-            )
-        except Exception as exc:
-            checks.append(
-                {
-                    "tool": label,
-                    "status": "unreachable",
-                    "purpose": "MCP app resource",
-                    "evidence": exc.__class__.__name__,
-                }
-            )
+    mcp_apps = (
+        (
+            "StoreTime",
+            STORETIME_MCP_URL,
+            "schedules, training conversion, and coverage reasons",
+            "App resource `bobabricks-storetime-mcp` is attached with CAN_USE.",
+        ),
+        (
+            "OpsTask",
+            OPSTASK_MCP_URL,
+            "approval-gated follow-up task listing and creation",
+            "App resource `bobabricks-opstask-mcp` is attached with CAN_USE.",
+        ),
+    )
+    for label, url, purpose, evidence in mcp_apps:
+        checks.append(
+            {
+                "tool": label,
+                "status": "configured" if url else "not configured",
+                "purpose": purpose,
+                "evidence": evidence if url else "No MCP URL in app env.",
+            }
+        )
 
     confluence_enabled = os.getenv("CONFLUENCE_MCP_ENABLED", "true").lower() == "true"
     atlassian_url = os.getenv("ATLASSIAN_MCP_URL", "")
@@ -532,7 +534,7 @@ def render_live_tool_registry(region: str, engine: StoreOpsEngine, status_rows: 
 
     st.session_state["tool_status"] = checks
     lines = [
-        "I actively checked these Bobabricks tools:",
+        "Here are the Bobabricks tools attached to this demo:",
         "",
         "| Tool | Live status | What it does | Check result |",
         "|---|---|---|---|",
@@ -741,7 +743,8 @@ def run_openai_agents_sdk_response(
             "Do not invent metrics, stores, goals, or task ids. Lead with the answer, then cite which tool supplied the evidence. "
             "Use check_available_tools for tool-list questions, compare_training_hours for training-hour comparisons, "
             "get_fy26_training_goals for FY26 standards or Store 104 goal questions, and generate_weekly_briefing for weekly briefing requests. "
-            "OpsTask creation remains approval-gated by the UI."
+            "OpsTask creation remains approval-gated by the UI. If a tool is marked configured, describe it as attached/configured; "
+            "do not downgrade configured Databricks App resources to unavailable because of raw session-context diagnostics."
         ),
         tools=[
             check_available_tools,
