@@ -1,13 +1,20 @@
+import json
+import os
+import re
 import uuid
 
+import requests
 import streamlit as st
+from databricks.sdk import WorkspaceClient
 
 from services.lakebase_memory import LakebaseMemoryClient
 from services.store_ops import LocalDataStore, OpsTaskClient, StoreOpsEngine
 
+MAS_ENDPOINT_NAME = os.environ.get("MAS_ENDPOINT_NAME", "mas-994e0d40-endpoint")
+
 st.set_page_config(
     page_title="Bobabricks powered by Databricks and Lakebase",
-    page_icon="B",
+    page_icon="🧋",
     layout="centered",
 )
 
@@ -61,7 +68,7 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
 
     if "tool" in lowered and "weekly" not in lowered:
         st.session_state["tool_status"] = status_rows
-        tools = "\n".join(f"- {row['tool']}: {row['status']}" for row in status_rows)
+        tools = "\n".join(f"- {row['tool']} ({row['status']}): {row['purpose']}" for row in status_rows)
         return (
             "I have these Bobabricks demo tools attached:\n\n"
             f"{tools}\n\n"
@@ -117,6 +124,108 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
     )
 
 
+@st.cache_resource
+def get_workspace_client():
+    return WorkspaceClient()
+
+
+def clean_agent_response(full_text: str) -> str:
+    text = re.sub(
+        r"<name>([^<]+)</name>",
+        lambda match: f"*Calling tool... {match.group(1).replace('_', ' ').replace('-', ' ')}*",
+        full_text,
+    )
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text or "No response from the agent."
+
+
+def stream_mas(messages: list[dict]):
+    workspace = get_workspace_client()
+    url = f"{workspace.config.host.rstrip('/')}/serving-endpoints/{MAS_ENDPOINT_NAME}/invocations"
+    headers = workspace.config.authenticate()
+    headers["Content-Type"] = "application/json"
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json={"input": messages, "stream": True},
+        stream=True,
+        timeout=300,
+    )
+    response.raise_for_status()
+
+    emitted_tools = set()
+    for line in response.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if payload == "[DONE]":
+            break
+        try:
+            event = json.loads(payload)
+        except json.JSONDecodeError:
+            continue
+
+        event_type = event.get("type", "")
+        if event_type in ("response.output_item.added", "response.output_item.done"):
+            item = event.get("item", {})
+            tool_name = item.get("name") if item.get("type") == "function_call" else None
+            for block in item.get("content", []):
+                text = block.get("text", "").strip()
+                match = re.match(r"^<name>([^<]+)</name>$", text)
+                if match:
+                    tool_name = match.group(1)
+            if tool_name and tool_name not in emitted_tools:
+                emitted_tools.add(tool_name)
+                yield f"\n\n*Calling tool... {tool_name.replace('_', ' ').replace('-', ' ')}*\n\n"
+
+        if event_type == "response.output_text.delta":
+            yield event.get("delta", "")
+        elif "delta" in event:
+            delta = event["delta"]
+            yield delta if isinstance(delta, str) else delta.get("content", "")
+
+
+def query_mas(messages: list[dict]) -> str:
+    workspace = get_workspace_client()
+    url = f"{workspace.config.host.rstrip('/')}/serving-endpoints/{MAS_ENDPOINT_NAME}/invocations"
+    headers = workspace.config.authenticate()
+    headers["Content-Type"] = "application/json"
+
+    response = requests.post(url, headers=headers, json={"input": messages}, timeout=300)
+    response.raise_for_status()
+    data = response.json()
+
+    parts = []
+    for item in data.get("output", []):
+        if item.get("type") == "message":
+            for block in item.get("content", []):
+                if block.get("type") == "output_text":
+                    parts.append(block["text"])
+    return clean_agent_response("\n\n".join(parts))
+
+
+def build_agent_messages(prompt: str, prior_messages: list[dict], selected_region: str, status_rows: list[dict]) -> list[dict]:
+    tool_context = "\n".join(
+        f"- {row['tool']} ({row['status']}): {row['purpose']}" for row in status_rows
+    )
+    system_context = (
+        "You are the Bobabricks store operations demo assistant. "
+        f"The selected region is {selected_region}. "
+        "Use the attached Databricks resources and MCP tools when answering: Genie for metrics, "
+        "StoreTime for scheduling/training evidence, OpsTask for follow-up tasks, Confluence for FY26 standards, "
+        "Inventory MCP for stockout risk, and Lakebase for memory. "
+        "When you use a tool, briefly name what evidence came from it. "
+        "Do not invent task creation; ask for approval before creating OpsTask tickets.\n\n"
+        f"Available tools:\n{tool_context}"
+    )
+    conversation = [{"role": "system", "content": system_context}]
+    conversation.extend(prior_messages[-8:])
+    conversation.append({"role": "user", "content": prompt})
+    return conversation
+
+
 data_store = LocalDataStore()
 engine = StoreOpsEngine(data_store)
 ops_tasks = OpsTaskClient(data_store)
@@ -137,7 +246,7 @@ high_count = sum(issue.severity == "high" for issue in engine.build_weekly_brief
 memory_status = memory.status()
 memory.remember_preference("demo_user", "selected_region", selected_region)
 
-st.title("Bobabricks")
+st.title("🧋 Bobabricks")
 st.caption("powered by Databricks and Lakebase")
 st.markdown(
     """
@@ -199,6 +308,7 @@ with st.sidebar:
             f'<span class="tool-pill {status_class}">{row["tool"]}: {row["status"]}</span>',
             unsafe_allow_html=True,
         )
+        st.caption(row["purpose"])
 
     st.divider()
     if st.button("New Chat", use_container_width=True):
@@ -240,10 +350,24 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    response = response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
     with st.chat_message("assistant"):
-        st.markdown(response)
+        placeholder = st.empty()
+        raw_response = "*Calling agent... Bobabricks Store Operations*\n\n"
+        placeholder.markdown(raw_response)
+        try:
+            for chunk in stream_mas(agent_messages):
+                raw_response += chunk
+                placeholder.markdown(clean_agent_response(raw_response))
+            response = clean_agent_response(raw_response)
+        except Exception as exc:
+            response = response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)
+            response = (
+                f"*Agent endpoint fallback: {exc.__class__.__name__}. Showing local demo data instead.*\n\n"
+                f"{response}"
+            )
+        placeholder.markdown(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
 
 if st.session_state.get("tool_status"):
     with st.expander("Available tool details", expanded=True):
