@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -24,6 +25,8 @@ OPSTASK_MCP_URL = os.environ.get(
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "0bf53eaf9b66d1fd").strip()
 DATABRICKS_CATALOG = os.environ.get("DATABRICKS_CATALOG", "bobabricks_demo").strip()
 DATABRICKS_SCHEMA = os.environ.get("DATABRICKS_SCHEMA", "store_ops").strip()
+AGENT_MODEL = os.environ.get("AGENT_MODEL", "databricks-claude-sonnet-4").strip()
+OPENAI_AGENTS_SDK_ENABLED = os.environ.get("OPENAI_AGENTS_SDK_ENABLED", "true").lower() == "true"
 
 st.set_page_config(
     page_title="Bobabricks powered by Databricks and Lakebase",
@@ -672,6 +675,107 @@ def local_tool_response(
     return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
 
 
+def _run_async(coro):
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+def run_openai_agents_sdk_response(
+    prompt: str,
+    selected_region: str,
+    engine: StoreOpsEngine,
+    ops_tasks: OpsTaskClient,
+    status_rows: list[dict],
+) -> str | None:
+    if not OPENAI_AGENTS_SDK_ENABLED:
+        return None
+
+    try:
+        from agents import Agent, Runner, function_tool, set_default_openai_api, set_default_openai_client
+        from databricks_openai import AsyncDatabricksOpenAI
+    except Exception:
+        return None
+
+    set_default_openai_client(AsyncDatabricksOpenAI())
+    set_default_openai_api("chat_completions")
+
+    @function_tool
+    def check_available_tools() -> str:
+        """Actively check Bobabricks tool/resource reachability and return tool names and status."""
+        return render_live_tool_registry(selected_region, engine, status_rows)
+
+    @function_tool
+    def compare_training_hours() -> str:
+        """Compare scheduled versus actual training hours for the selected region and flag stores behind target."""
+        return render_training_hours_markdown(selected_region, engine)
+
+    @function_tool
+    def get_fy26_training_goals() -> str:
+        """Retrieve FY26 training goals and compare Store 104 against those standards."""
+        return render_fy26_goals_markdown(selected_region, engine)
+
+    @function_tool
+    def generate_weekly_briefing() -> str:
+        """Generate a weekly regional risk briefing and draft approval-gated OpsTask follow-ups."""
+        return response_for_prompt(
+            f"Generate my weekly {selected_region} regional risk briefing and create follow-up tasks for high-severity items.",
+            selected_region,
+            engine,
+            ops_tasks,
+            status_rows,
+        )
+
+    agent = Agent(
+        name="Bobabricks Store Operations Agent",
+        model=AGENT_MODEL,
+        instructions=(
+            "You are the Bobabricks Store Operations Agent. Use the provided tools for all demo questions. "
+            "Do not invent metrics, stores, goals, or task ids. Lead with the answer, then cite which tool supplied the evidence. "
+            "Use check_available_tools for tool-list questions, compare_training_hours for training-hour comparisons, "
+            "get_fy26_training_goals for FY26 standards or Store 104 goal questions, and generate_weekly_briefing for weekly briefing requests. "
+            "OpsTask creation remains approval-gated by the UI."
+        ),
+        tools=[
+            check_available_tools,
+            compare_training_hours,
+            get_fy26_training_goals,
+            generate_weekly_briefing,
+        ],
+    )
+
+    try:
+        result = _run_async(Runner.run(agent, [{"role": "user", "content": prompt}]))
+    except Exception:
+        return None
+
+    final_output = getattr(result, "final_output", None)
+    if final_output:
+        return str(final_output)
+
+    new_items = getattr(result, "new_items", [])
+    parts = []
+    for item in new_items:
+        try:
+            value = item.to_input_item()
+        except Exception:
+            value = item
+        if isinstance(value, dict):
+            content = value.get("content")
+            if isinstance(content, str):
+                parts.append(content)
+            elif isinstance(content, list):
+                parts.extend(part.get("text", "") for part in content if isinstance(part, dict))
+    return "\n\n".join(part for part in parts if part) or None
+
+
 data_store, ops_tasks, _direct_resources_enabled = build_resource_clients()
 engine = StoreOpsEngine(data_store)
 memory = LakebaseMemoryClient()
@@ -785,17 +889,22 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        raw_response = f"*Calling agent... Bobabricks Store Operations*\n\n{render_tool_call_order(prompt)}\n\n"
+        raw_response = f"*Calling OpenAI Agents SDK... Bobabricks Store Operations Agent*\n\n{render_tool_call_order(prompt)}\n\n"
         placeholder.markdown(raw_response)
-        if MAS_ENDPOINT_NAME:
+
+        sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
+        if sdk_response:
+            response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
+        elif MAS_ENDPOINT_NAME:
+            agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
             try:
+                mas_response = ""
                 for chunk in stream_mas(agent_messages):
-                    raw_response += chunk
-                    placeholder.markdown(clean_agent_response(raw_response))
-                response = clean_agent_response(raw_response)
+                    mas_response += chunk
+                    placeholder.markdown(f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(mas_response)}")
+                response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(mas_response)}"
             except Exception:
                 response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
         else:

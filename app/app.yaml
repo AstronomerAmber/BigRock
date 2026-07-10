@@ -10,6 +10,10 @@ command:
 env:
   - name: AGENT_CONFIG
     value: ../agent-store-ops/agent.yaml
+  - name: AGENT_MODEL
+    value: databricks-claude-sonnet-4
+  - name: OPENAI_AGENTS_SDK_ENABLED
+    value: "true"
   - name: GENIE_SPACE_ID
     value: 01f17b1364c914589ab9d24a70bf5b6f
   - name: DATABRICKS_WAREHOUSE_ID
