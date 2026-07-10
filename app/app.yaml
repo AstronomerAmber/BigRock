@@ -10,6 +10,8 @@ command:
 env:
   - name: AGENT_CONFIG
     value: ../agent-store-ops/agent.yaml
+  - name: GENIE_SPACE_ID
+    value: 01f17b1364c914589ab9d24a70bf5b6f
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql_warehouse
   - name: DATABRICKS_CATALOG
@@ -28,8 +30,12 @@ env:
     value: bobabricks_app
   - name: STORETIME_APP_NAME
     value: bobabricks-storetime-mcp
+  - name: STORETIME_MCP_URL
+    value: https://bobabricks-storetime-mcp-2847375137997282.aws.databricksapps.com/mcp
   - name: OPSTASK_APP_NAME
     value: bobabricks-opstask-mcp
+  - name: OPSTASK_MCP_URL
+    value: https://bobabricks-opstask-mcp-2847375137997282.aws.databricksapps.com/mcp
   - name: INVENTORY_APP_MCP_ENABLED
     value: "true"
   - name: INVENTORY_APP_NAME

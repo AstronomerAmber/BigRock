@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import uuid
 
 import requests
@@ -11,6 +12,18 @@ from services.lakebase_memory import LakebaseMemoryClient
 from services.store_ops import LocalDataStore, OpsTaskClient, StoreOpsEngine
 
 MAS_ENDPOINT_NAME = os.environ.get("MAS_ENDPOINT_NAME", "").strip()
+GENIE_SPACE_ID = os.environ.get("GENIE_SPACE_ID", "01f17b1364c914589ab9d24a70bf5b6f").strip()
+STORETIME_MCP_URL = os.environ.get(
+    "STORETIME_MCP_URL",
+    "https://bobabricks-storetime-mcp-2847375137997282.aws.databricksapps.com/mcp",
+).strip()
+OPSTASK_MCP_URL = os.environ.get(
+    "OPSTASK_MCP_URL",
+    "https://bobabricks-opstask-mcp-2847375137997282.aws.databricksapps.com/mcp",
+).strip()
+DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "0bf53eaf9b66d1fd").strip()
+DATABRICKS_CATALOG = os.environ.get("DATABRICKS_CATALOG", "bobabricks_demo").strip()
+DATABRICKS_SCHEMA = os.environ.get("DATABRICKS_SCHEMA", "store_ops").strip()
 
 st.set_page_config(
     page_title="Bobabricks powered by Databricks and Lakebase",
@@ -143,9 +156,180 @@ def clean_agent_response(full_text: str) -> str:
     return text or "No response from the agent."
 
 
+class DatabricksSqlResourceClient:
+    def __init__(self):
+        self.workspace = get_workspace_client()
+
+    @staticmethod
+    def table(name: str) -> str:
+        return f"{DATABRICKS_CATALOG}.{DATABRICKS_SCHEMA}.{name}"
+
+    def query(self, statement: str, parameters: dict | None = None) -> list[dict]:
+        response = self.workspace.api_client.do(
+            "POST",
+            "/api/2.0/sql/statements",
+            body={
+                "warehouse_id": DATABRICKS_WAREHOUSE_ID,
+                "statement": statement,
+                "parameters": [
+                    {"name": key, "value": str(value)}
+                    for key, value in (parameters or {}).items()
+                    if value is not None
+                ],
+                "wait_timeout": "30s",
+                "on_wait_timeout": "CONTINUE",
+            },
+        )
+        statement_id = response.get("statement_id")
+        while response.get("status", {}).get("state") in {"PENDING", "RUNNING"}:
+            time.sleep(1)
+            response = self.workspace.api_client.do("GET", f"/api/2.0/sql/statements/{statement_id}")
+        if response.get("status", {}).get("state") != "SUCCEEDED":
+            raise RuntimeError(json.dumps(response.get("status", response), default=str))
+        columns = [col["name"] for col in response.get("manifest", {}).get("schema", {}).get("columns", [])]
+        return [dict(zip(columns, row, strict=False)) for row in response.get("result", {}).get("data_array", [])]
+
+
+class JsonRpcMcpResourceClient:
+    def __init__(self, url: str):
+        self.url = url
+        self.workspace = get_workspace_client()
+
+    def call_tool(self, name: str, arguments: dict | None = None) -> list[dict] | dict:
+        headers = self.workspace.config.authenticate()
+        headers["Content-Type"] = "application/json"
+        response = requests.post(
+            self.url,
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": str(uuid.uuid4()),
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments or {}},
+            },
+            timeout=45,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if "error" in payload:
+            raise RuntimeError(payload["error"].get("message", payload["error"]))
+        content = payload.get("result", {}).get("content", [])
+        if not content:
+            return {}
+        text = content[0].get("text", "{}")
+        return json.loads(text)
+
+
+class DirectStoreOpsDataStore(LocalDataStore):
+    def __init__(self):
+        super().__init__()
+        self.sql = DatabricksSqlResourceClient()
+
+    def store_metrics(self, region: str) -> list[dict[str, str]]:
+        rows = self.sql.query(
+            f"""
+            SELECT region, store_id, store_name, sales_vs_plan_pct, training_completion_pct,
+                   avg_wait_minutes, customer_satisfaction
+            FROM {self.sql.table("store_metrics")}
+            WHERE lower(region) = lower(:region)
+            ORDER BY store_id
+            """,
+            {"region": region},
+        )
+        return [{key: str(value) for key, value in row.items()} for row in rows]
+
+    def schedules(self) -> dict[str, dict[str, str]]:
+        rows = self.sql.query(
+            f"""
+            SELECT store_id, week, scheduled_training_hours, completed_training_hours,
+                   converted_training_hours, conversion_reason
+            FROM {self.sql.table("schedules")}
+            ORDER BY store_id
+            """
+        )
+        return {str(row["store_id"]): {key: str(value or "") for key, value in row.items()} for row in rows}
+
+    def inventory(self) -> list[dict[str, str]]:
+        rows = self.sql.query(
+            f"""
+            SELECT store_id, ingredient, on_hand_units, forecast_7d_units, reorder_eta_days, stockout_risk
+            FROM {self.sql.table("inventory")}
+            ORDER BY store_id, ingredient
+            """
+        )
+        return [{key: str(value) for key, value in row.items()} for row in rows]
+
+    def regions(self) -> list[str]:
+        rows = self.sql.query(
+            f"""
+            SELECT DISTINCT region
+            FROM {self.sql.table("store_metrics")}
+            ORDER BY region
+            """
+        )
+        return [str(row["region"]) for row in rows]
+
+    def existing_tasks(self) -> list[dict]:
+        rows = self.sql.query(
+            f"""
+            SELECT task_id, store_id, title, description, category, severity, status, created_date, owner
+            FROM {self.sql.table("ops_tasks")}
+            ORDER BY created_date DESC, task_id
+            LIMIT 100
+            """
+        )
+        return rows
+
+
+class DirectOpsTaskClient(OpsTaskClient):
+    def __init__(self, data_store: LocalDataStore):
+        super().__init__(data_store)
+        self.mcp = JsonRpcMcpResourceClient(OPSTASK_MCP_URL)
+
+    def list_tasks(self) -> list[dict]:
+        return self.mcp.call_tool("list_existing_ops_tasks", {})
+
+    def create_tasks(self, drafts) -> list[dict]:
+        created = []
+        for draft in drafts:
+            created.append(
+                self.mcp.call_tool(
+                    "create_ops_task",
+                    {
+                        "store_id": int(draft.store_id) if str(draft.store_id).isdigit() else draft.store_id,
+                        "title": draft.title,
+                        "description": draft.description,
+                        "category": draft.category,
+                        "severity": draft.severity,
+                    },
+                )
+            )
+        return created
+
+
+def build_resource_clients() -> tuple[LocalDataStore, OpsTaskClient, bool]:
+    try:
+        data = DirectStoreOpsDataStore()
+        data.regions()
+        return data, DirectOpsTaskClient(data), True
+    except Exception:
+        data = LocalDataStore()
+        return data, OpsTaskClient(data), False
+
+
 def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
     metrics = engine.data_store.store_metrics(region)
-    schedules = engine.data_store.schedules()
+    try:
+        storetime = JsonRpcMcpResourceClient(STORETIME_MCP_URL)
+        storetime_rows = []
+        for metric in metrics:
+            result = storetime.call_tool("inspect_schedule", {"store_id": int(metric["store_id"])})
+            storetime_rows.extend(result if isinstance(result, list) else [result])
+        schedules = {str(row["store_id"]): {key: str(value or "") for key, value in row.items()} for row in storetime_rows}
+        storetime_source = "StoreTime MCP `inspect_schedule`"
+    except Exception:
+        schedules = engine.data_store.schedules()
+        storetime_source = "StoreTime fallback schedule table"
     targets = engine.data_store.playbooks()["FY26 Store Operations Goals"]
     target_training = float(targets["training_completion_target_pct"])
 
@@ -182,8 +366,8 @@ def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
         "",
         "**Evidence used**",
         "- **Confluence:** FY26 training completion target.",
-        "- **Genie Agent:** store-level training completion metrics.",
-        "- **StoreTime:** scheduled, completed, and converted training hours.",
+        f"- **Genie/data resource:** store-level training completion metrics from `{DATABRICKS_CATALOG}.{DATABRICKS_SCHEMA}.store_metrics`.",
+        f"- **StoreTime:** scheduled, completed, and converted training hours from {storetime_source}.",
         "",
         (
             f"Across {len(rows)} {region} stores, average scheduled training is "
@@ -356,9 +540,8 @@ def local_tool_response(
     return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
 
 
-data_store = LocalDataStore()
+data_store, ops_tasks, direct_resources_enabled = build_resource_clients()
 engine = StoreOpsEngine(data_store)
-ops_tasks = OpsTaskClient(data_store)
 memory = LakebaseMemoryClient()
 
 regions = data_store.regions()
@@ -426,6 +609,7 @@ with st.sidebar:
 
     st.divider()
     st.markdown("**Runtime**")
+    st.metric("Execution", "Direct resources" if direct_resources_enabled else "Local fallback")
     st.metric("Active tools", f"{enabled_count}/{len(status_rows)}")
     st.metric("Open high risks", high_count)
     st.metric("Approval policy", "Required")
