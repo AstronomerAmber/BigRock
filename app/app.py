@@ -683,6 +683,11 @@ def local_tool_response(
     return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
 
 
+def should_preserve_structured_response(prompt: str) -> bool:
+    lowered = prompt.lower()
+    return "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind"))
+
+
 def _run_async(coro):
     try:
         asyncio.get_running_loop()
@@ -911,10 +916,17 @@ if prompt:
         raw_response = f"*Calling OpenAI Agents SDK... Bobabricks Store Operations Agent*\n\n{render_tool_call_order(prompt)}\n\n"
         placeholder.markdown(raw_response)
 
-        sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
-        if sdk_response:
-            response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
-        elif MAS_ENDPOINT_NAME:
+        sdk_response = None
+        if should_preserve_structured_response(prompt):
+            response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
+        else:
+            sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
+            if sdk_response:
+                response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
+            else:
+                response = None
+
+        if not response and MAS_ENDPOINT_NAME:
             agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
             try:
                 mas_response = ""
