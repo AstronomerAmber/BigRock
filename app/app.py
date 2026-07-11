@@ -38,13 +38,17 @@ def configure_mlflow_autologging() -> None:
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "").strip()
     registry_uri = os.environ.get("MLFLOW_REGISTRY_URI", "").strip()
     experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID", "").strip()
+    experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", "").strip()
 
     try:
         if tracking_uri:
             mlflow.set_tracking_uri(tracking_uri)
         if registry_uri:
             mlflow.set_registry_uri(registry_uri)
-        if experiment_id:
+        if experiment_name:
+            os.environ.pop("MLFLOW_EXPERIMENT_ID", None)
+            mlflow.set_experiment(experiment_name=experiment_name)
+        elif experiment_id:
             mlflow.set_experiment(experiment_id=experiment_id)
         mlflow.openai.autolog()
     except Exception:
@@ -169,6 +173,31 @@ def clean_agent_response(full_text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text or "No response from the agent."
+
+
+def record_mlflow_chat_trace(prompt: str, response: str, selected_region: str, route: str) -> None:
+    try:
+        import mlflow
+    except Exception:
+        return
+
+    start_span = getattr(mlflow, "start_span", None)
+    if not start_span:
+        return
+
+    try:
+        with start_span(name="bobabricks_chat_turn") as span:
+            if hasattr(span, "set_inputs"):
+                span.set_inputs({"prompt": prompt, "selected_region": selected_region})
+            if hasattr(span, "set_outputs"):
+                span.set_outputs({"response": response[:8000]})
+            if hasattr(span, "set_attribute"):
+                span.set_attribute("bobabricks.route", route)
+                span.set_attribute("bobabricks.model", AGENT_MODEL)
+            elif hasattr(span, "set_attributes"):
+                span.set_attributes({"bobabricks.route": route, "bobabricks.model": AGENT_MODEL})
+    except Exception:
+        return
 
 
 class DatabricksSqlResourceClient:
@@ -990,12 +1019,15 @@ if prompt:
         sdk_response = None
         if should_preserve_structured_response(prompt):
             response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
+            response_route = "structured_tool_response"
         else:
             sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
             if sdk_response:
                 response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
+                response_route = "openai_agents_sdk"
             else:
                 response = None
+                response_route = "pending_fallback"
 
         if not response and MAS_ENDPOINT_NAME:
             agent_messages = build_agent_messages(prompt, st.session_state.messages[:-1], selected_region, status_rows)
@@ -1005,10 +1037,16 @@ if prompt:
                     mas_response += chunk
                     placeholder.markdown(f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(mas_response)}")
                 response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(mas_response)}"
+                response_route = "model_serving_endpoint"
             except Exception:
                 response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
-        else:
+                response_route = "local_fallback"
+
+        if not response:
             response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
+            response_route = "local_fallback"
+
+        record_mlflow_chat_trace(prompt, response, selected_region, response_route)
         placeholder.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
 
