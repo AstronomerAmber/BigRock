@@ -223,7 +223,6 @@ export function AppSidebar({
         <BobabricksDemoQuestions
           onSelect={(question) => {
             setOpenMobile(false);
-            navigate('/');
             submitDemoQuestion(question);
           }}
         />
