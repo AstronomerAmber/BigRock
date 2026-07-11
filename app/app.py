@@ -110,7 +110,7 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
     if "tool" in lowered and "weekly" not in lowered:
         return render_live_tool_registry(selected_region, engine, status_rows)
 
-    if "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind")):
+    if is_training_hours_comparison(prompt):
         return render_training_hours_markdown(selected_region, engine)
 
     if "fy26" in lowered or "goal" in lowered or "standard" in lowered:
@@ -577,6 +577,40 @@ def render_live_tool_registry(
     return "\n".join(lines)
 
 
+def render_store_ops_context(region: str, engine: StoreOpsEngine, ops_tasks: OpsTaskClient) -> str:
+    metrics = engine.data_store.store_metrics(region)
+    store_ids = {str(row["store_id"]) for row in metrics}
+    schedules = {
+        store_id: schedule
+        for store_id, schedule in engine.data_store.schedules().items()
+        if str(store_id) in store_ids
+    }
+    inventory = [
+        row
+        for row in engine.data_store.inventory()
+        if str(row.get("store_id")) in store_ids
+    ]
+    playbooks = engine.data_store.playbooks()
+    try:
+        tasks = [
+            task
+            for task in ops_tasks.list_tasks()
+            if str(task.get("store_id")) in store_ids
+        ]
+    except Exception:
+        tasks = []
+
+    context = {
+        "selected_region": region,
+        "store_metrics": metrics,
+        "training_schedules": schedules,
+        "inventory": inventory,
+        "playbooks": playbooks,
+        "existing_ops_tasks": tasks,
+    }
+    return json.dumps(context, indent=2)
+
+
 def stream_mas(messages: list[dict]):
     workspace = get_workspace_client()
     url = f"{workspace.config.host.rstrip('/')}/serving-endpoints/{MAS_ENDPOINT_NAME}/invocations"
@@ -708,9 +742,13 @@ def local_tool_response(
     return f"{render_tool_call_order(prompt)}\n\n{response_for_prompt(prompt, selected_region, engine, ops_tasks, status_rows)}"
 
 
-def should_preserve_structured_response(prompt: str) -> bool:
+def is_training_hours_comparison(prompt: str) -> bool:
     lowered = prompt.lower()
-    return "training" in lowered and any(term in lowered for term in ("average", "actual", "hours", "behind"))
+    return "training" in lowered and any(term in lowered for term in ("average", "actual", "hours"))
+
+
+def should_preserve_structured_response(prompt: str) -> bool:
+    return is_training_hours_comparison(prompt)
 
 
 def _run_async(coro):
@@ -779,14 +817,21 @@ def run_openai_agents_sdk_response(
             status_rows,
         )
 
+    @function_tool
+    def get_store_ops_context() -> str:
+        """Load regional store metrics, schedules, inventory, operating standards, and existing OpsTask context for free-form questions."""
+        return render_store_ops_context(selected_region, engine, ops_tasks)
+
     agent = Agent(
         name="Bobabricks Store Operations Agent",
         model=AGENT_MODEL,
         instructions=(
-            "You are the Bobabricks Store Operations Agent. Use the provided tools for all demo questions. "
+            "You are the Bobabricks Store Operations Agent. Use the provided tools for all user questions. "
             "Do not invent metrics, stores, goals, or task ids. Lead with the answer, then cite which tool supplied the evidence. "
             "Use check_available_tools for tool-list questions, compare_training_hours for training-hour comparisons, "
             "get_fy26_training_goals for FY26 standards or Store 104 goal questions, and generate_weekly_briefing for weekly briefing requests. "
+            "For any other free-form store, region, risk, training, inventory, customer-experience, or task question, call get_store_ops_context "
+            "and answer from that context. If the requested fact is not present, say what is missing instead of guessing. "
             "OpsTask creation remains approval-gated by the UI. If a tool is marked configured, describe it as attached/configured; "
             "do not downgrade configured Databricks App resources to unavailable because of raw session-context diagnostics."
         ),
@@ -795,6 +840,7 @@ def run_openai_agents_sdk_response(
             compare_training_hours,
             get_fy26_training_goals,
             generate_weekly_briefing,
+            get_store_ops_context,
         ],
     )
 
