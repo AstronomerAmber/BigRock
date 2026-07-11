@@ -83,8 +83,7 @@ function BobabricksResourcePanel() {
         </div>
         <div className="mt-2 space-y-2">
           {tools.map(([name, purpose]) => (
-            <div key={name} className="flex items-start gap-2 text-sm">
-              <StatusDot tone={name === 'OpsTask' ? 'amber' : 'green'} />
+            <div key={name} className="text-sm">
               <div>
                 <div className="font-medium">{name}</div>
                 <div className="text-xs leading-5 text-muted-foreground">{purpose}</div>
@@ -205,8 +204,10 @@ interface SuggestedActionsProps {
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const { chatHistoryEnabled } = useAppConfig();
   const suggestedActions = [
-    'How can you help me?',
-    'Tell me something I might not know',
+    'What tools do you have?',
+    'Show average versus actual training hours for my Pacific stores and flag any stores falling behind.',
+    'What are our FY26 training goals, and how does Store 104 stack up?',
+    'Generate my weekly regional risk briefing.',
   ];
 
   return (
@@ -254,6 +255,35 @@ export const SuggestedActions = memo(
     return true;
   },
 );
+"""
+
+
+BOBABRICKS_GREETING = r"""import { motion } from 'framer-motion';
+
+export const Greeting = () => {
+  return (
+    <div
+      key="overview"
+      className="mx-auto flex size-full max-w-3xl flex-col justify-center px-4 mb-6 text-center"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        className="space-y-3"
+      >
+        <div className="text-2xl font-semibold md:text-3xl">🧋 Bobabricks</div>
+        <div className="text-sm font-medium text-muted-foreground">Powered by Databricks</div>
+        <p className="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+          Bobabricks is a premium boba tea company running a store operations demo on Databricks.
+          This assistant helps regional leaders inspect FY26 training goals, store execution risk,
+          scheduling evidence, and approval-gated follow-up tasks across Genie, StoreTime, OpsTask,
+          Confluence, and Lakebase.
+        </p>
+      </motion.div>
+    </div>
+  );
+};
 """
 
 
@@ -332,6 +362,10 @@ class ProcessManager:
         )
         (frontend_dir / "client/src/components/suggested-actions.tsx").write_text(
             BOBABRICKS_SUGGESTED_ACTIONS,
+            encoding="utf-8",
+        )
+        (frontend_dir / "client/src/components/greeting.tsx").write_text(
+            BOBABRICKS_GREETING,
             encoding="utf-8",
         )
         print("Applied Bobabricks frontend overlay.")
