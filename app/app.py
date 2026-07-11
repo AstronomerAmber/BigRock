@@ -8,7 +8,7 @@ import requests
 import streamlit as st
 from databricks.sdk import WorkspaceClient
 
-from bobabricks_agent import AGENT_MODEL, BobabricksAgentTools, run_bobabricks_agent
+from bobabricks_agent import AGENT_MODEL, run_bobabricks_agent
 from services.lakebase_memory import LakebaseMemoryClient
 from services.store_ops import LocalDataStore, OpsTaskClient, StoreOpsEngine
 
@@ -887,21 +887,6 @@ if typed_prompt:
     prompt = typed_prompt
 
 if prompt:
-    agent_tools = BobabricksAgentTools(
-        check_available_tools=lambda: render_live_tool_registry(
-            selected_region, engine, status_rows, persist_to_session=False
-        ),
-        compare_training_hours=lambda: render_training_hours_markdown(selected_region, engine),
-        get_fy26_training_goals=lambda: render_fy26_goals_markdown(selected_region, engine),
-        generate_weekly_briefing=lambda: response_for_prompt(
-            f"Generate my weekly {selected_region} regional risk briefing and create follow-up tasks for high-severity items.",
-            selected_region,
-            engine,
-            ops_tasks,
-            status_rows,
-        ),
-        get_store_ops_context=lambda: render_store_ops_context(selected_region, engine, ops_tasks),
-    )
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -913,7 +898,7 @@ if prompt:
 
         sdk_response = None
         if should_preserve_structured_response(prompt):
-            sdk_response = run_bobabricks_agent(prompt, selected_region, agent_tools)
+            sdk_response = run_bobabricks_agent(prompt, selected_region)
             if sdk_response and "| Store |" in sdk_response:
                 response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
                 response_route = "openai_agents_sdk"
@@ -921,7 +906,7 @@ if prompt:
                 response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
                 response_route = "structured_tool_response"
         else:
-            sdk_response = run_bobabricks_agent(prompt, selected_region, agent_tools)
+            sdk_response = run_bobabricks_agent(prompt, selected_region)
             if sdk_response:
                 response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
                 response_route = "openai_agents_sdk"
