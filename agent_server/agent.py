@@ -331,6 +331,8 @@ def create_agent(mcp_servers=None, unavailable_tools=None, extra_tools=None, con
 
 
 def maybe_create_session(session_id: str) -> AsyncDatabricksSession | None:
+    if os.getenv("BOBABRICKS_DISABLE_LAKEBASE") == "1":
+        return None
     if not lakebase_config.is_configured:
         return None
     return AsyncDatabricksSession(

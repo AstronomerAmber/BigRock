@@ -53,8 +53,13 @@ async def _lifespan(app):
     try:
         await run_lakebase_session_setup()
     except Exception as exc:
-        logger.error("Lakebase session setup failed: %s\n\n%s", exc, lakebase_access_message(), exc_info=True)
-        raise
+        os.environ["BOBABRICKS_DISABLE_LAKEBASE"] = "1"
+        logger.warning(
+            "Lakebase session setup failed; continuing without persistent session memory: %s\n\n%s",
+            exc,
+            lakebase_access_message(),
+            exc_info=True,
+        )
     try:
         async with _original_lifespan(app):
             yield
