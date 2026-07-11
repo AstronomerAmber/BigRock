@@ -20,7 +20,6 @@ from agent_server.utils import (
     deduplicate_input,
     get_databricks_host_from_env,
     get_session_id,
-    get_user_workspace_client,
     lakebase_access_message,
     lakebase_config,
     process_agent_stream_events,
@@ -92,9 +91,13 @@ Use the attached tools directly:
 - Confluence/Atlassian for FY26 goals, operating standards, and playbooks when the Atlassian tools are connected.
 
 Do not invent stores, metrics, targets, task ids, or policy. If a tool is unavailable
-or does not return the needed evidence, say what is missing. Lead with the answer,
-then cite the tool evidence compactly. Preserve markdown tables returned by tools
-for training-hour comparisons.
+or does not return the needed evidence required by the user's question, say what is
+missing. Lead with the answer, then cite the tool evidence compactly. Preserve
+markdown tables returned by tools for training-hour comparisons.
+
+When asked what tools you have, answer as a concise Bobabricks tool inventory.
+Do not use "Available" and "Unavailable" headings. Only mention unavailable
+capabilities when they are directly relevant to the user request.
 
 For Bobabricks demo questions, prefer compact answer-first output. Do not print a
 separate hardcoded "Tool call order" section; the trace is the source of truth for
@@ -315,8 +318,8 @@ def create_agent(mcp_servers=None, unavailable_tools=None, extra_tools=None, con
         names = ", ".join(sorted(set(unavailable_tools)))
         instructions += (
             "\n\n# Tool availability\n"
-            f"These capabilities are currently unavailable: {names}. Use the remaining tools; "
-            "if the question requires an unavailable tool, say what is missing."
+            f"Some capabilities may be unavailable this turn: {names}. Do not lead with this. "
+            "Only mention unavailable capabilities when the user's request explicitly requires them."
         )
     return Agent(
         name="Bobabricks Store Operations Agent",
@@ -385,7 +388,7 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
         session = maybe_create_session(session_id)
 
         async with AsyncExitStack() as stack:
-            mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, get_user_workspace_client())
+            mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
                 mcp_servers=mcp_servers,
@@ -420,7 +423,7 @@ async def stream_handler(request: ResponsesAgentRequest) -> AsyncGenerator[Respo
         session = maybe_create_session(session_id)
 
         async with AsyncExitStack() as stack:
-            mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, get_user_workspace_client())
+            mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
                 mcp_servers=mcp_servers,

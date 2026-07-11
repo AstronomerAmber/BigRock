@@ -96,6 +96,56 @@ function BobabricksResourcePanel() {
   );
 }
 
+const demoQuestions = [
+  'What tools do you have?',
+  'Show average versus actual training hours for my Pacific stores and flag any stores falling behind.',
+  'What are our FY26 training goals, and how does Store 104 stack up?',
+  'Generate my weekly regional risk briefing.',
+];
+
+function submitDemoQuestion(question: string) {
+  const send = () => {
+    const textarea = document.querySelector('textarea');
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      window.setTimeout(send, 80);
+      return;
+    }
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      'value',
+    )?.set;
+    valueSetter?.call(textarea, question);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.focus();
+    textarea.closest('form')?.requestSubmit();
+  };
+
+  window.setTimeout(send, 80);
+}
+
+function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) => void }) {
+  return (
+    <div className="mx-2 mt-3 space-y-2 rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Demo questions
+      </div>
+      <div className="space-y-1">
+        {demoQuestions.map((question) => (
+          <button
+            key={question}
+            type="button"
+            onClick={() => onSelect(question)}
+            className="block w-full rounded-md px-2 py-2 text-left text-xs leading-5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            {question}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AppSidebar({
   user,
   preferredUsername,
@@ -169,6 +219,15 @@ export function AppSidebar({
       </div>
 
       {effectiveOpen && <BobabricksResourcePanel />}
+      {effectiveOpen && (
+        <BobabricksDemoQuestions
+          onSelect={(question) => {
+            setOpenMobile(false);
+            navigate('/');
+            submitDemoQuestion(question);
+          }}
+        />
+      )}
 
       <SidebarContent>
         {effectiveOpen && <SidebarHistory user={user} />}
