@@ -9,10 +9,252 @@ import threading
 import time
 from pathlib import Path
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
 
 BACKEND_READY = [r"Uvicorn running on", r"Application startup complete", r"Started server process"]
 FRONTEND_READY = [r"Server is running on http://localhost", r"Ready"]
+
+
+BOBABRICKS_APP_SIDEBAR = r"""import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+
+import { SidebarHistory } from '@/components/sidebar-history';
+import { SidebarUserNav } from '@/components/sidebar-user-nav';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DbIcon } from '@/components/ui/db-icon';
+import { NewChatIcon, SidebarCollapseIcon, SidebarExpandIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import type { ClientSession } from '@chat-template/auth';
+import { Action } from './elements/actions';
+
+function StatusDot({ tone = 'green' }: { tone?: 'green' | 'amber' }) {
+  return (
+    <span
+      className={cn(
+        'mt-1 size-2 shrink-0 rounded-full',
+        tone === 'green' ? 'bg-emerald-500' : 'bg-amber-500',
+      )}
+    />
+  );
+}
+
+function BobabricksResourcePanel() {
+  const tools = [
+    ['Genie Agent', 'governed store metrics'],
+    ['StoreTime', 'training schedules and converted hours'],
+    ['OpsTask', 'approval-gated follow-ups'],
+    ['Confluence', 'FY26 goals and operating standards'],
+  ];
+
+  return (
+    <div className="mx-2 mt-3 space-y-3 rounded-lg border border-sidebar-border bg-sidebar-accent/35 p-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Lakebase
+        </div>
+        <div className="mt-1 flex items-start gap-2 text-sm">
+          <StatusDot />
+          <div>
+            <div className="font-medium">bobabricks</div>
+            <div className="text-xs leading-5 text-muted-foreground">
+              Stores regional preference and demo session memory.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Tools
+        </div>
+        <div className="mt-2 space-y-2">
+          {tools.map(([name, purpose]) => (
+            <div key={name} className="flex items-start gap-2 text-sm">
+              <StatusDot tone={name === 'OpsTask' ? 'amber' : 'green'} />
+              <div>
+                <div className="font-medium">{name}</div>
+                <div className="text-xs leading-5 text-muted-foreground">{purpose}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AppSidebar({
+  user,
+  preferredUsername,
+}: {
+  user: ClientSession['user'] | undefined;
+  preferredUsername: string | null;
+}) {
+  const navigate = useNavigate();
+  const { setOpenMobile, open, openMobile, isMobile, toggleSidebar } = useSidebar();
+
+  const effectiveOpen = open || (isMobile && openMobile);
+
+  return (
+    <Sidebar
+      collapsible="icon"
+      className="group-data-[side=left]:border-r-0"
+    >
+      <SidebarHeader
+        className={cn(
+          'h-[44px] flex-row items-center gap-2 px-2 py-0',
+          effectiveOpen ? 'justify-between' : 'justify-center',
+        )}
+      >
+        {effectiveOpen && (
+          <Link
+            to="/"
+            onClick={() => setOpenMobile(false)}
+            className="flex items-center overflow-hidden px-1"
+          >
+            <span className="text-base font-semibold text-foreground">
+              Bobabricks
+            </span>
+          </Link>
+        )}
+
+        <Action
+          onClick={toggleSidebar}
+          tooltip={effectiveOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        >
+          <DbIcon
+            icon={effectiveOpen ? SidebarCollapseIcon : SidebarExpandIcon}
+            size={16}
+            color="muted"
+          />
+        </Action>
+      </SidebarHeader>
+
+      <div className="px-2 pt-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuButton
+                  type="button"
+                  className="h-8 p-1 md:p-2 cursor-pointer"
+                  onClick={() => {
+                    setOpenMobile(false);
+                    navigate('/');
+                  }}
+                >
+                  <DbIcon icon={NewChatIcon} size={16} color="default" />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    New chat
+                  </span>
+                </SidebarMenuButton>
+              </TooltipTrigger>
+              <TooltipContent side="right" style={{ display: open ? 'none' : 'block' }}>New chat</TooltipContent>
+            </Tooltip>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
+
+      {effectiveOpen && <BobabricksResourcePanel />}
+
+      <SidebarContent>
+        {effectiveOpen && <SidebarHistory user={user} />}
+      </SidebarContent>
+
+      <SidebarFooter>
+        {user && (
+          <SidebarUserNav user={user} preferredUsername={preferredUsername} />
+        )}
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+"""
+
+
+BOBABRICKS_SUGGESTED_ACTIONS = r"""import { motion } from 'framer-motion';
+import { memo } from 'react';
+import type { UseChatHelpers } from '@ai-sdk/react';
+import type { VisibilityType } from './visibility-selector';
+import type { ChatMessage } from '@chat-template/core';
+import { Suggestion } from './elements/suggestion';
+import { LightbulbIcon } from '@/components/icons';
+import { softNavigateToChatId } from '@/lib/navigation';
+import { useAppConfig } from '@/contexts/AppConfigContext';
+
+interface SuggestedActionsProps {
+  chatId: string;
+  sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
+  selectedVisibilityType: VisibilityType;
+}
+
+function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+  const { chatHistoryEnabled } = useAppConfig();
+  const suggestedActions = [
+    'How can you help me?',
+    'Tell me something I might not know',
+  ];
+
+  return (
+    <div
+      data-testid="suggested-actions"
+      className="flex w-full flex-col"
+    >
+      {suggestedActions.map((suggestedAction, index) => (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ delay: 0.05 * index }}
+          key={suggestedAction}
+          className="border-b border-border"
+        >
+          <Suggestion
+            suggestion={suggestedAction}
+            variant="tertiary"
+            onClick={(suggestion) => {
+              softNavigateToChatId(chatId, chatHistoryEnabled);
+              sendMessage({
+                role: 'user',
+                parts: [{ type: 'text', text: suggestion }],
+              });
+            }}
+            className="h-auto w-full justify-start gap-2 rounded-none border-0 bg-transparent py-2 pl-0 text-left text-sm font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+          >
+            <LightbulbIcon size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+            {suggestedAction}
+          </Suggestion>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+export const SuggestedActions = memo(
+  PureSuggestedActions,
+  (prevProps, nextProps) => {
+    if (prevProps.chatId !== nextProps.chatId) return false;
+    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
+      return false;
+
+    return true;
+  },
+);
+"""
 
 
 def _port_available(port: int) -> bool:
@@ -81,6 +323,18 @@ class ProcessManager:
             print(f"Failed to clone frontend: {exc.stderr or exc.stdout}")
             shutil.rmtree("temp-app-templates", ignore_errors=True)
             return False
+
+    def apply_bobabricks_frontend_overlay(self) -> None:
+        frontend_dir = Path("e2e-chatbot-app-next")
+        (frontend_dir / "client/src/components/app-sidebar.tsx").write_text(
+            BOBABRICKS_APP_SIDEBAR,
+            encoding="utf-8",
+        )
+        (frontend_dir / "client/src/components/suggested-actions.tsx").write_text(
+            BOBABRICKS_SUGGESTED_ACTIONS,
+            encoding="utf-8",
+        )
+        print("Applied Bobabricks frontend overlay.")
 
     def monitor_process(self, process, name: str, log_file, patterns: list[str]) -> None:
         ready = False
@@ -155,6 +409,7 @@ class ProcessManager:
                 print("Frontend unavailable; running backend only.")
                 self.no_ui = True
             else:
+                self.apply_bobabricks_frontend_overlay()
                 os.environ["API_PROXY"] = f"http://localhost:{self.port}/invocations"
 
         self.backend_log = open("backend.log", "w", buffering=1)
