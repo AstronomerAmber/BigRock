@@ -1,7 +1,7 @@
 command:
   - python
   - -m
-  - agent_server.start_server
+  - scripts.start_app
 
 env:
   - name: CHAT_APP_PORT
