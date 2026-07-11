@@ -14,6 +14,12 @@ env:
     value: databricks-claude-sonnet-4
   - name: OPENAI_AGENTS_SDK_ENABLED
     value: "true"
+  - name: MLFLOW_TRACKING_URI
+    value: databricks
+  - name: MLFLOW_REGISTRY_URI
+    value: databricks-uc
+  - name: MLFLOW_EXPERIMENT_ID
+    value: "1247045021302485"
   - name: GENIE_SPACE_ID
     value: 01f17b1364c914589ab9d24a70bf5b6f
   - name: DATABRICKS_WAREHOUSE_ID

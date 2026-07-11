@@ -3,3 +3,4 @@ databricks-sdk>=0.38.0
 psycopg2-binary>=2.9,<3
 openai-agents>=0.4.1
 databricks-openai>=0.15.0
+mlflow>=3.14,<4
