@@ -37,19 +37,22 @@ def configure_mlflow_autologging() -> None:
 
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "").strip()
     registry_uri = os.environ.get("MLFLOW_REGISTRY_URI", "").strip()
+    experiment_id = os.environ.get("MLFLOW_EXPERIMENT_ID", "").strip()
 
     try:
         if tracking_uri:
             mlflow.set_tracking_uri(tracking_uri)
         if registry_uri:
             mlflow.set_registry_uri(registry_uri)
+        if experiment_id:
+            mlflow.set_experiment(experiment_id=experiment_id)
         mlflow.openai.autolog()
     except Exception:
         return
 
 
 st.set_page_config(
-    page_title="Bobabricks powered by Databricks and Lakebase",
+    page_title="Bobabricks Powered by Databricks",
     page_icon="🧋",
     layout="centered",
 )
@@ -839,7 +842,7 @@ memory_status = memory.status()
 memory.remember_preference("demo_user", "selected_region", selected_region)
 
 st.title("🧋 Bobabricks")
-st.caption("powered by Databricks and Lakebase")
+st.caption("Powered by Databricks")
 st.markdown(
     """
     <div class="bb-intro">
