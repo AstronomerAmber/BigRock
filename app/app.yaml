@@ -11,7 +11,7 @@ env:
   - name: AGENT_CONFIG
     value: ../agent-store-ops/agent.yaml
   - name: AGENT_MODEL
-    value: databricks-claude-sonnet-4
+    value: databricks-gpt-5
   - name: OPENAI_AGENTS_SDK_ENABLED
     value: "true"
   - name: MLFLOW_TRACKING_URI

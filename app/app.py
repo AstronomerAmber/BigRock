@@ -25,7 +25,7 @@ OPSTASK_MCP_URL = os.environ.get(
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "0bf53eaf9b66d1fd").strip()
 DATABRICKS_CATALOG = os.environ.get("DATABRICKS_CATALOG", "bobabricks_demo").strip()
 DATABRICKS_SCHEMA = os.environ.get("DATABRICKS_SCHEMA", "store_ops").strip()
-AGENT_MODEL = os.environ.get("AGENT_MODEL", "databricks-claude-sonnet-4").strip()
+AGENT_MODEL = os.environ.get("AGENT_MODEL", "databricks-gpt-5").strip()
 OPENAI_AGENTS_SDK_ENABLED = os.environ.get("OPENAI_AGENTS_SDK_ENABLED", "true").lower() == "true"
 
 
