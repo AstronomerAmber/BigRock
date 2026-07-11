@@ -22,7 +22,6 @@ FRONTEND_READY = [r"Server is running on http://localhost", r"Ready"]
 BOBABRICKS_APP_SIDEBAR = r"""import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 
-import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import {
   Sidebar,
@@ -229,7 +228,6 @@ export function AppSidebar({
       )}
 
       <SidebarContent>
-        {effectiveOpen && <SidebarHistory user={user} />}
       </SidebarContent>
 
       <SidebarFooter>
