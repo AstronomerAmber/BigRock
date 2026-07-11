@@ -859,6 +859,7 @@ def run_openai_agents_sdk_response(
             "Do not invent metrics, stores, goals, or task ids. Lead with the answer, then cite which tool supplied the evidence. "
             "Use check_available_tools for tool-list questions, compare_training_hours for training-hour comparisons, "
             "get_fy26_training_goals for FY26 standards or Store 104 goal questions, and generate_weekly_briefing for weekly briefing requests. "
+            "When compare_training_hours returns a markdown table, preserve that table in your final answer instead of summarizing it. "
             "For any other free-form store, region, risk, training, inventory, customer-experience, or task question, call get_store_ops_context "
             "and answer from that context. If the requested fact is not present, say what is missing instead of guessing. "
             "OpsTask creation remains approval-gated by the UI. If a tool is marked configured, describe it as attached/configured; "
@@ -1018,8 +1019,13 @@ if prompt:
 
         sdk_response = None
         if should_preserve_structured_response(prompt):
-            response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
-            response_route = "structured_tool_response"
+            sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
+            if sdk_response and "| Store |" in sdk_response:
+                response = f"{render_tool_call_order(prompt)}\n\n{clean_agent_response(sdk_response)}"
+                response_route = "openai_agents_sdk"
+            else:
+                response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
+                response_route = "structured_tool_response"
         else:
             sdk_response = run_openai_agents_sdk_response(prompt, selected_region, engine, ops_tasks, status_rows)
             if sdk_response:
