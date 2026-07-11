@@ -32,6 +32,45 @@ explicit approval when the UI requires approval.
 """
 
 
+def _enrich_agent_spans() -> None:
+    """Make MLflow labels for Agents SDK MCP spans useful in the trace UI."""
+    try:
+        from mlflow.openai import _agent_tracer as tracer
+
+        orig_name = tracer._get_span_name
+        orig_parse = tracer._parse_span_data
+
+        def name(span_data):
+            span_type = getattr(span_data, "type", "")
+            if span_type == "turn":
+                return f"Turn #{getattr(span_data, 'turn', '?')}"
+            if span_type == "mcp_tools":
+                return f"MCP: list tools ({getattr(span_data, 'server', '?')})"
+            existing = getattr(span_data, "name", None)
+            return existing if existing else orig_name(span_data)
+
+        def parse(span_data):
+            inputs, outputs, attributes = orig_parse(span_data)
+            attributes = dict(attributes or {})
+            span_type = getattr(span_data, "type", "")
+            if span_type == "mcp_tools":
+                tools = list(getattr(span_data, "result", None) or [])
+                attributes["server"] = getattr(span_data, "server", None)
+                attributes["tool_count"] = len(tools)
+                outputs = {"tools": tools}
+            elif span_type == "turn":
+                attributes["turn"] = getattr(span_data, "turn", None)
+                attributes["agent"] = getattr(span_data, "agent_name", None)
+                if getattr(span_data, "usage", None):
+                    attributes["usage"] = span_data.usage
+            return inputs, outputs, attributes
+
+        tracer._get_span_name = name
+        tracer._parse_span_data = parse
+    except Exception:
+        return
+
+
 def _run_async(coro):
     try:
         asyncio.get_running_loop()
@@ -150,6 +189,7 @@ async def _run_bobabricks_agent_async(prompt: str, selected_region: str) -> str 
     set_default_openai_client(AsyncDatabricksOpenAI())
     set_default_openai_api("chat_completions")
     set_trace_processors([])
+    _enrich_agent_spans()
 
     workspace_client = _tool_workspace_client()
     async with AsyncExitStack() as stack:

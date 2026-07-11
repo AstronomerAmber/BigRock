@@ -12,16 +12,24 @@ def list_existing_ops_tasks(arguments: dict) -> list[dict]:
     store_id = arguments.get("store_id")
     status = arguments.get("status")
     table = db.table_name("ops_tasks")
+    where = []
+    params = {}
+    if store_id is not None:
+        where.append("store_id = CAST(:store_id AS INT)")
+        params["store_id"] = store_id
+    if status:
+        where.append("lower(status) = lower(:status)")
+        params["status"] = status
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
     return db.query(
         f"""
         SELECT task_id, store_id, title, description, category, severity, status, created_date, owner
         FROM {table}
-        WHERE (:store_id IS NULL OR store_id = CAST(:store_id AS INT))
-          AND (:status IS NULL OR lower(status) = lower(:status))
+        {where_sql}
         ORDER BY created_date DESC, task_id
         LIMIT 100
         """,
-        {"store_id": store_id, "status": status},
+        params,
     )
 
 

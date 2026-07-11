@@ -10,7 +10,15 @@ def inspect_schedule(arguments: dict) -> list[dict]:
     week = arguments.get("week")
     schedule_table = db.table_name("schedules")
     shift_table = db.table_name("storetime_shifts")
-    where = ["(:store_id IS NULL OR s.store_id = CAST(:store_id AS INT))", "(:week IS NULL OR s.week = :week)"]
+    where = []
+    params = {}
+    if store_id is not None:
+        where.append("s.store_id = CAST(:store_id AS INT)")
+        params["store_id"] = store_id
+    if week:
+        where.append("s.week = :week")
+        params["week"] = week
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
     return db.query(
         f"""
         SELECT s.store_id, s.week, s.scheduled_training_hours, s.completed_training_hours,
@@ -20,13 +28,13 @@ def inspect_schedule(arguments: dict) -> list[dict]:
                sum(sh.actual_partners) AS actual_partners
         FROM {schedule_table} s
         LEFT JOIN {shift_table} sh ON s.store_id = sh.store_id
-        WHERE {' AND '.join(where)}
+        {where_sql}
         GROUP BY s.store_id, s.week, s.scheduled_training_hours, s.completed_training_hours,
                  s.converted_training_hours, s.conversion_reason
         ORDER BY s.store_id
         LIMIT 100
         """,
-        {"store_id": store_id, "week": week},
+        params,
     )
 
 
@@ -34,17 +42,25 @@ def list_training_events(arguments: dict) -> list[dict]:
     store_id = arguments.get("store_id")
     week = arguments.get("week")
     table = db.table_name("training_events")
+    where = []
+    params = {}
+    if store_id is not None:
+        where.append("store_id = CAST(:store_id AS INT)")
+        params["store_id"] = store_id
+    if week:
+        where.append("week = :week")
+        params["week"] = week
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
     return db.query(
         f"""
         SELECT store_id, week, scheduled_training_hours, completed_training_hours,
                converted_training_hours, conversion_reason
         FROM {table}
-        WHERE (:store_id IS NULL OR store_id = CAST(:store_id AS INT))
-          AND (:week IS NULL OR week = :week)
+        {where_sql}
         ORDER BY store_id, week
         LIMIT 100
         """,
-        {"store_id": store_id, "week": week},
+        params,
     )
 
 
