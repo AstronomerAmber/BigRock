@@ -343,6 +343,15 @@ export const Greeting = () => {
 """
 
 
+BOBABRICKS_STALE_CHAT_REDIRECT = """\
+    <script>
+      if (window.location.pathname.startsWith('/chat/')) {
+        window.history.replaceState(null, '', '/');
+      }
+    </script>
+"""
+
+
 def _port_available(port: int) -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -424,6 +433,11 @@ class ProcessManager:
             BOBABRICKS_GREETING,
             encoding="utf-8",
         )
+        index_file = frontend_dir / "client/index.html"
+        index_html = index_file.read_text(encoding="utf-8")
+        if "window.location.pathname.startsWith('/chat/')" not in index_html:
+            index_html = index_html.replace("</head>", f"{BOBABRICKS_STALE_CHAT_REDIRECT}</head>")
+            index_file.write_text(index_html, encoding="utf-8")
         print("Applied Bobabricks frontend overlay.")
 
     def monitor_process(self, process, name: str, log_file, patterns: list[str]) -> None:
