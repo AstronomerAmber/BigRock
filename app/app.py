@@ -1046,7 +1046,8 @@ if prompt:
             response = local_tool_response(prompt, selected_region, engine, ops_tasks, status_rows)
             response_route = "local_fallback"
 
-        record_mlflow_chat_trace(prompt, response, selected_region, response_route)
+        if response_route not in {"openai_agents_sdk", "model_serving_endpoint"}:
+            record_mlflow_chat_trace(prompt, response, selected_region, response_route)
         placeholder.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
 
