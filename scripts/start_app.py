@@ -506,9 +506,6 @@ class ProcessManager:
 
     def run(self, backend_args: list[str] | None = None) -> int:
         load_dotenv(dotenv_path=Path(".env"), override=True)
-        if os.environ.get("BOBABRICKS_SIMPLE_UI", "true").strip().lower() in {"1", "true", "on", "yes"}:
-            self.no_ui = True
-            self.port = int(os.environ.get("CHAT_APP_PORT", os.environ.get("PORT", "3000")))
         self.check_ports()
 
         if not self.no_ui:
@@ -525,8 +522,6 @@ class ProcessManager:
 
         try:
             backend_cmd = ["python", "-m", "agent_server.start_server"]
-            if self.no_ui and not backend_args:
-                backend_cmd.extend(["--port", str(self.port)])
             if backend_args:
                 backend_cmd.extend(backend_args)
             self.backend_process = self.start_process(
