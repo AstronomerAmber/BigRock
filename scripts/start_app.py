@@ -437,15 +437,40 @@ class ProcessManager:
                     "const PurePreviewMessage = ({",
                     """function bobabricksToolDisplayName(toolName: string) {
   if (/^query_space_[0-9a-f]+$/.test(toolName)) {
-    return 'bobabricks_store_operations';
+    return 'Genie Space [bobabricks_store_operations]';
   }
   if (/^poll_response_[0-9a-f]+$/.test(toolName)) {
-    return 'bobabricks_store_operations';
+    return 'Genie Space [bobabricks_store_operations]';
+  }
+  if (['inspect_schedule', 'list_training_events'].includes(toolName)) {
+    return 'MCP[bobabricks-storetime-mcp]';
+  }
+  if (['list_existing_ops_tasks', 'create_ops_task'].includes(toolName)) {
+    return 'MCP[bobabricks-opstask-mcp]';
   }
   return toolName;
 }
 
 const PurePreviewMessage = ({""",
+                    1,
+                )
+            message_text = message_text.replace(
+                "return 'bobabricks_store_operations';",
+                "return 'Genie Space [bobabricks_store_operations]';",
+            )
+            if "MCP[bobabricks-storetime-mcp]" not in message_text:
+                message_text = message_text.replace(
+                    "  return toolName;\n}\n\nconst PurePreviewMessage",
+                    """  if (['inspect_schedule', 'list_training_events'].includes(toolName)) {
+    return 'MCP[bobabricks-storetime-mcp]';
+  }
+  if (['list_existing_ops_tasks', 'create_ops_task'].includes(toolName)) {
+    return 'MCP[bobabricks-opstask-mcp]';
+  }
+  return toolName;
+}
+
+const PurePreviewMessage""",
                     1,
                 )
             if "const displayToolName = bobabricksToolDisplayName(toolName);" not in message_text:

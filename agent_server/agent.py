@@ -46,9 +46,13 @@ def _enrich_agent_spans() -> None:
                 return value
             text = str(value)
             if re.fullmatch(r"query_space_[0-9a-f]+", text):
-                return "bobabricks_store_operations"
+                return "Genie Space [bobabricks_store_operations]"
             if re.fullmatch(r"poll_response_[0-9a-f]+", text):
-                return "bobabricks_store_operations"
+                return "Genie Space [bobabricks_store_operations]"
+            if text in {"inspect_schedule", "list_training_events"}:
+                return "MCP[bobabricks-storetime-mcp]"
+            if text in {"list_existing_ops_tasks", "create_ops_task"}:
+                return "MCP[bobabricks-opstask-mcp]"
             return value
 
         def name(span_data):
