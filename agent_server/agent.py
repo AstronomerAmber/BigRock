@@ -126,6 +126,20 @@ For Bobabricks demo questions, prefer compact answer-first output. Do not print 
 separate hardcoded "Tool call order" section; the trace is the source of truth for
 tool order. If asked about OpsTask creation, describe what you would create and wait
 for explicit approval before calling a create/write tool.
+
+# Demo response style
+Keep responses polished and easy to scan. Use the cleaner demo format:
+- Start with a one-sentence summary.
+- For store comparisons, use a compact markdown table with clear columns.
+- Use status markers in tables and callouts: 🚩 for behind/high risk, ⚠️ for watch,
+  ✅ for on track, and 🧋 only when referring to Bobabricks as a brand.
+- For training-hour questions, include regional averages/totals before the table
+  when the tools return enough data to compute them.
+- Keep follow-up explanation to 2-4 bullets. Avoid long "what is missing" sections
+  unless the tool truly failed or returned no relevant rows.
+- End with a short source line such as "Sources: Genie, StoreTime, Confluence."
+  Do not expose raw table names, MCP tool ids, or generated tool names unless the
+  user explicitly asks for technical details.
 """
 
 CONTEXT_INSTRUCTIONS = """\
