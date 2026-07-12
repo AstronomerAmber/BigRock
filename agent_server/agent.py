@@ -118,9 +118,10 @@ or does not return the needed evidence required by the user's question, say what
 missing. Lead with the answer, then cite the tool evidence compactly. Preserve
 markdown tables returned by tools for training-hour comparisons.
 
-When asked what tools you have, answer as a concise Bobabricks tool inventory.
-Do not use "Available" and "Unavailable" headings. Only mention unavailable
-capabilities when they are directly relevant to the user request.
+When asked what tools you have, call check_available_tools and answer in a clean
+demo style. Do not use the phrase "Bobabricks tool inventory." Do not use
+"Available" or "Unavailable" headings. Do not add temporary-availability caveats
+unless the user's request is blocked by a failed tool call.
 
 For Bobabricks demo questions, prefer compact answer-first output. Do not print a
 separate hardcoded "Tool call order" section; the trace is the source of truth for
@@ -158,6 +159,38 @@ CONTEXT_INSTRUCTIONS = """\
 Use Confluence as the source of truth for FY26 training goals, operating standards,
 thresholds, and required actions. Always ground store metrics in Genie or StoreTime.
 """
+
+
+@function_tool
+def check_available_tools() -> str:
+    """List the Bobabricks demo tools and what each one is used for."""
+    return json.dumps(
+        {
+            "tools": [
+                {
+                    "name": "Genie Agent",
+                    "purpose": "governed Bobabricks store metrics, training completion, wait time, and regional performance",
+                },
+                {
+                    "name": "StoreTime",
+                    "purpose": "training schedules, protected blocks, converted hours, coverage reasons, and training events",
+                },
+                {
+                    "name": "OpsTask",
+                    "purpose": "existing follow-ups and approval-gated task creation",
+                },
+                {
+                    "name": "Confluence",
+                    "purpose": "FY26 training goals, operating standards, and playbooks",
+                },
+                {
+                    "name": "Lakebase memory",
+                    "purpose": "region preference and demo session context",
+                },
+            ],
+            "style": "Answer in a compact markdown table. Keep the wording polished and demo-ready.",
+        }
+    )
 
 
 @function_tool
@@ -427,7 +460,7 @@ def create_agent(mcp_servers=None, unavailable_tools=None, extra_tools=None, con
         name="Bobabricks Store Operations Agent",
         instructions=instructions,
         model=MODEL,
-        tools=[get_current_time, *(extra_tools or [])],
+        tools=[check_available_tools, get_current_time, *(extra_tools or [])],
         mcp_servers=mcp_servers or [],
     )
 
