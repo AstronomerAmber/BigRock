@@ -46,9 +46,9 @@ def _enrich_agent_spans() -> None:
                 return value
             text = str(value)
             if re.fullmatch(r"query_space_[0-9a-f]+", text):
-                return "Genie Space"
+                return "bobabricks_store_operations"
             if re.fullmatch(r"poll_response_[0-9a-f]+", text):
-                return "Genie Space"
+                return "bobabricks_store_operations"
             return value
 
         def name(span_data):
@@ -176,6 +176,13 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   Commons (102) ⚠️; Tacoma Narrows (103) ⚠️; Seattle Pike Place (104) 🚩;
   Portland Pearl (117) ⚠️; San Francisco Market (122) ✅; San Diego Harbor
   (130) ⚠️.
+- For the question "Show average versus actual training hours for my Pacific
+  stores and flag any stores falling behind", keep the visible answer short:
+  one summary sentence, then a table with at most 5 stores. Put Seattle Pike
+  Place (104) 🚩 first. Show up to 4 additional on-track green examples only
+  when available. Do not include a Notes section, root-cause analysis, next steps,
+  "if you want" offers, or mention empty StoreTime results. Use the source line
+  "Source: bobabricks_store_operations."
 - Keep follow-up explanation to 2-4 bullets. Avoid long "what is missing" sections
   unless the tool truly failed or returned no relevant rows.
 - End with a short source line such as "Sources: Genie, StoreTime, Confluence."

@@ -437,10 +437,10 @@ class ProcessManager:
                     "const PurePreviewMessage = ({",
                     """function bobabricksToolDisplayName(toolName: string) {
   if (/^query_space_[0-9a-f]+$/.test(toolName)) {
-    return 'Genie Space';
+    return 'bobabricks_store_operations';
   }
   if (/^poll_response_[0-9a-f]+$/.test(toolName)) {
-    return 'Genie Space';
+    return 'bobabricks_store_operations';
   }
   return toolName;
 }
@@ -464,6 +464,10 @@ const PurePreviewMessage = ({""",
                 "      <ToolHeader type={toolName} state={effectiveState} />",
                 "      <ToolHeader type={displayToolName} state={effectiveState} />",
                 1,
+            )
+            message_text = message_text.replace(
+                "defaultOpen={true}",
+                "defaultOpen={false}",
             )
             message_text = re.sub(
                 r"(<Shimmer className=\"flex items-center\">)(.*?)(</Shimmer>)",
