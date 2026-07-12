@@ -278,9 +278,9 @@ async def build_atlassian_tools(stack: AsyncExitStack) -> tuple[list[FunctionToo
 
 
 def build_mcp_servers(workspace_client: WorkspaceClient) -> list[McpServer]:
-    servers = [
-        McpServer(url=_genie_mcp_url(), name="bobabricks_genie", workspace_client=workspace_client),
-    ]
+    servers = []
+    if os.getenv("ENABLE_GENIE_MCP", "true").strip().lower() not in {"0", "false", "off", "no"}:
+        servers.append(McpServer(url=_genie_mcp_url(), name="bobabricks_genie", workspace_client=workspace_client))
     if STORETIME_MCP_URL:
         servers.append(McpServer(url=STORETIME_MCP_URL, name="storetime", workspace_client=workspace_client))
     if OPSTASK_MCP_URL:
