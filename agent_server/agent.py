@@ -46,9 +46,9 @@ def _enrich_agent_spans() -> None:
                 return value
             text = str(value)
             if re.fullmatch(r"query_space_[0-9a-f]+", text):
-                return "Genie Space - query Bobabricks store metrics"
+                return "Genie Space"
             if re.fullmatch(r"poll_response_[0-9a-f]+", text):
-                return "Genie Space - poll query result"
+                return "Genie Space"
             return value
 
         def name(span_data):
@@ -122,20 +122,33 @@ When asked what tools you have, answer from the configured Bobabricks tool
 context in a clean demo style. Do not call a tool for this question. Do not use
 the phrase "Bobabricks tool inventory." Do not use "Available" or "Unavailable"
 headings. Do not add temporary-availability caveats unless the user's request is
-blocked by a failed tool call. Mention four connected tools plus Lakebase memory,
-with one concrete example each:
-- Genie Space: governed analytics over Bobabricks store metrics, training
-  completion, wait time, and regional performance; example: compare Pacific
-  training completion by store.
-- StoreTime: schedules, protected training blocks, converted hours, and coverage
-  reasons; example: explain whether Store 104 is behind because training blocks
-  were converted to rush-window coverage.
-- OpsTask: existing follow-ups and approval-gated operational task creation;
-  example: draft or create a manager follow-up after explicit approval.
-- Confluence/Atlassian: FY26 goals, operating standards, and playbooks; example:
-  retrieve the training completion target and protected-training standard.
-- Lakebase memory: region preference and demo session context; example: remember
-  the selected region for later questions.
+blocked by a failed tool call. Mention four connected tools plus Lakebase memory.
+For each, include the resource/tool name, what it contains, what it can do, and
+what it cannot do. Use this inventory:
+- Genie Space: named bobabricks_store_operations. It contains governed store
+  metrics from the Bobabricks store_ops data, including store identity, region,
+  training completion, scheduled/completed training hours, wait time, and regional
+  performance. It can answer analytical questions, compare stores/regions, compute
+  training completion, and produce store-performance tables. It cannot create
+  tasks, update schedules, approve actions, or replace operating standards.
+- StoreTime MCP app: named bobabricks-storetime-mcp. It contains schedule and
+  training-event evidence: protected training blocks, completed hours, converted
+  hours, rush-window coverage reasons, and store-level training diagnostics. It can
+  explain why a store is behind on training and distinguish scheduling problems
+  from completion/utilization problems. It cannot change schedules or create
+  follow-up tasks.
+- OpsTask MCP app: named bobabricks-opstask-mcp. It contains operational follow-up
+  task lookup and creation tools. It can list existing follow-ups and create a
+  manager task only after explicit approval. It cannot create tasks silently, change
+  store metrics, or diagnose training root cause by itself.
+- Confluence/Atlassian: connected through the Databricks Atlassian MCP. It contains
+  FY26 goals, operating standards, and playbooks. It can retrieve policy context
+  such as the 95% training target and protected-training standard. It cannot query
+  live store metrics, inspect schedules, or create OpsTask follow-ups.
+- Lakebase memory: instance bobabricks / projects/bobabricks. It contains session
+  memory and user preferences such as selected region and demo context. It can
+  remember stable context for later questions. It cannot provide governed metrics,
+  operating policy, or schedule evidence.
 
 For Bobabricks demo questions, prefer compact answer-first output. Do not print a
 separate hardcoded "Tool call order" section; the trace is the source of truth for

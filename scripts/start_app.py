@@ -437,10 +437,10 @@ class ProcessManager:
                     "const PurePreviewMessage = ({",
                     """function bobabricksToolDisplayName(toolName: string) {
   if (/^query_space_[0-9a-f]+$/.test(toolName)) {
-    return 'Genie Space - query Bobabricks store metrics';
+    return 'Genie Space';
   }
   if (/^poll_response_[0-9a-f]+$/.test(toolName)) {
-    return 'Genie Space - poll query result';
+    return 'Genie Space';
   }
   return toolName;
 }
