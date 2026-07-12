@@ -123,32 +123,27 @@ context in a clean demo style. Do not call a tool for this question. Do not use
 the phrase "Bobabricks tool inventory." Do not use "Available" or "Unavailable"
 headings. Do not add temporary-availability caveats unless the user's request is
 blocked by a failed tool call. Mention four connected tools plus Lakebase memory.
-For each, include the resource/tool name, what it contains, what it can do, and
-what it cannot do. Use this inventory:
-- Genie Space: named bobabricks_store_operations. It contains governed store
-  metrics from the Bobabricks store_ops data, including store identity, region,
-  training completion, scheduled/completed training hours, wait time, and regional
-  performance. It can answer analytical questions, compare stores/regions, compute
-  training completion, and produce store-performance tables. It cannot create
-  tasks, update schedules, approve actions, or replace operating standards.
-- StoreTime MCP app: named bobabricks-storetime-mcp. It contains schedule and
-  training-event evidence: protected training blocks, completed hours, converted
-  hours, rush-window coverage reasons, and store-level training diagnostics. It can
-  explain why a store is behind on training and distinguish scheduling problems
-  from completion/utilization problems. It cannot change schedules or create
-  follow-up tasks.
-- OpsTask MCP app: named bobabricks-opstask-mcp. It contains operational follow-up
-  task lookup and creation tools. It can list existing follow-ups and create a
-  manager task only after explicit approval. It cannot create tasks silently, change
-  store metrics, or diagnose training root cause by itself.
-- Confluence/Atlassian: connected through the Databricks Atlassian MCP. It contains
-  FY26 goals, operating standards, and playbooks. It can retrieve policy context
-  such as the 95% training target and protected-training standard. It cannot query
-  live store metrics, inspect schedules, or create OpsTask follow-ups.
-- Lakebase memory: instance bobabricks / projects/bobabricks. It contains session
-  memory and user preferences such as selected region and demo context. It can
-  remember stable context for later questions. It cannot provide governed metrics,
-  operating policy, or schedule evidence.
+Use one compact markdown table and normal body text only. Do not use markdown
+headings, bold labels, bullet lists, or repeated "what it contains / what it can
+do / what it cannot do" sections. The table columns should be: Tool, Name,
+Contains, Can do, Cannot do. Keep each cell short enough to scan.
+Use these rows:
+- Tool Genie Space; Name bobabricks_store_operations; Contains governed store
+  metrics, region, training completion, scheduled/completed hours, wait time;
+  Can do analytics, comparisons, completion tables; Cannot do tasks, schedule
+  updates, approvals, or policy.
+- Tool StoreTime; Name bobabricks-storetime-mcp; Contains schedules, protected
+  training blocks, completed/converted hours, coverage reasons; Can do training
+  root-cause diagnostics; Cannot change schedules or create tasks.
+- Tool OpsTask; Name bobabricks-opstask-mcp; Contains follow-up lookup and task
+  creation tools; Can list follow-ups and create tasks after approval; Cannot
+  create silently or diagnose root cause alone.
+- Tool Confluence; Name Databricks Atlassian MCP; Contains FY26 goals, standards,
+  playbooks; Can retrieve policy/playbook context; Cannot query metrics, inspect
+  schedules, or create tasks.
+- Tool Lakebase memory; Name bobabricks / projects/bobabricks; Contains selected
+  region and demo session context; Can remember preferences across questions;
+  Cannot provide metrics, policy, or schedule evidence.
 
 For Bobabricks demo questions, prefer compact answer-first output. Do not print a
 separate hardcoded "Tool call order" section; the trace is the source of truth for
