@@ -80,6 +80,7 @@ OPSTASK_MCP_URL = os.getenv("OPSTASK_MCP_URL", "https://bobabricks-opstask-mcp-2
 ATLASSIAN_MCP_URL = os.getenv("ATLASSIAN_MCP_URL")
 ATLASSIAN_OFF_SENTINELS = {"", "off", "none", "disabled", "false"}
 ATLASSIAN_FRIENDLY_NAME = "Atlassian Confluence"
+USE_SDK_MCP_SERVERS = os.getenv("USE_SDK_MCP_SERVERS", "false").strip().lower() in {"1", "true", "on", "yes"}
 
 AGENT_INSTRUCTIONS = """\
 You are the Bobabricks Store Operations Agent for regional store leaders.
@@ -254,12 +255,32 @@ def _make_function_tool(client: DirectMcpClient, meta: dict[str, Any]) -> Functi
 
 def _atlassian_token() -> str:
     try:
-        token = (get_request_headers() or {}).get("x-forwarded-access-token")
+        headers = get_request_headers() or {}
+        token = headers.get("x-forwarded-access-token")
+        if not token:
+            authorization = headers.get("authorization", "")
+            if authorization.lower().startswith("bearer "):
+                token = authorization.split(" ", 1)[1]
         if token:
             return token
     except Exception:
         pass
     return os.getenv("ATLASSIAN_MCP_BEARER_TOKEN", "")
+
+
+def _databricks_mcp_token() -> str:
+    try:
+        headers = get_request_headers() or {}
+        token = headers.get("x-forwarded-access-token")
+        if not token:
+            authorization = headers.get("authorization", "")
+            if authorization.lower().startswith("bearer "):
+                token = authorization.split(" ", 1)[1]
+        if token:
+            return token
+    except Exception:
+        pass
+    return os.getenv("DATABRICKS_TOKEN", "")
 
 
 async def build_atlassian_tools(stack: AsyncExitStack) -> tuple[list[FunctionTool], list[str]]:
@@ -277,7 +298,34 @@ async def build_atlassian_tools(stack: AsyncExitStack) -> tuple[list[FunctionToo
         return [], [ATLASSIAN_FRIENDLY_NAME]
 
 
+async def build_direct_databricks_mcp_tools(stack: AsyncExitStack) -> tuple[list[FunctionTool], list[str]]:
+    if os.getenv("DISABLE_MCP_SERVERS", "false").strip().lower() in {"1", "true", "on", "yes"}:
+        return [], list(MCP_FRIENDLY_NAMES.values())
+    token = _databricks_mcp_token()
+    if not token:
+        return [], list(MCP_FRIENDLY_NAMES.values())
+
+    tools: list[FunctionTool] = []
+    unavailable: list[str] = []
+    for name, url in [
+        ("bobabricks_genie", _genie_mcp_url()),
+        ("storetime", STORETIME_MCP_URL),
+        ("opstask", OPSTASK_MCP_URL),
+    ]:
+        if not url:
+            continue
+        try:
+            client = await stack.enter_async_context(DirectMcpClient(url, token))
+            tools.extend(_make_function_tool(client, meta) for meta in await client.list_tools())
+        except Exception as exc:
+            logger.warning("MCP server %r unavailable over direct transport; running without it. (%s)", name, exc)
+            unavailable.append(MCP_FRIENDLY_NAMES.get(name, name))
+    return tools, unavailable
+
+
 def build_mcp_servers(workspace_client: WorkspaceClient) -> list[McpServer]:
+    if not USE_SDK_MCP_SERVERS:
+        return []
     servers = []
     if os.getenv("ENABLE_GENIE_MCP", "true").strip().lower() not in {"0", "false", "off", "no"}:
         servers.append(McpServer(url=_genie_mcp_url(), name="bobabricks_genie", workspace_client=workspace_client))
@@ -402,11 +450,12 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
         await stack.__aenter__()
         try:
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
+            direct_tools, direct_unavailable = await build_direct_databricks_mcp_tools(stack)
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
                 mcp_servers=mcp_servers,
-                unavailable_tools=unavailable_tools + atlassian_unavailable,
-                extra_tools=atlassian_tools,
+                unavailable_tools=unavailable_tools + direct_unavailable + atlassian_unavailable,
+                extra_tools=direct_tools + atlassian_tools,
                 context_tools_enabled=bool(atlassian_tools),
             )
             result = await Runner.run(agent, await deduplicate_input(request, session), session=session)
@@ -441,11 +490,12 @@ async def stream_handler(request: ResponsesAgentRequest) -> AsyncGenerator[Respo
         await stack.__aenter__()
         try:
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
+            direct_tools, direct_unavailable = await build_direct_databricks_mcp_tools(stack)
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
                 mcp_servers=mcp_servers,
-                unavailable_tools=unavailable_tools + atlassian_unavailable,
-                extra_tools=atlassian_tools,
+                unavailable_tools=unavailable_tools + direct_unavailable + atlassian_unavailable,
+                extra_tools=direct_tools + atlassian_tools,
                 context_tools_enabled=bool(atlassian_tools),
             )
             result = Runner.run_streamed(agent, input=await deduplicate_input(request, session), session=session)
