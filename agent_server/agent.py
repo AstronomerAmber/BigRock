@@ -315,7 +315,7 @@ async def connect_available_mcp_servers(stack: AsyncExitStack, workspace_client:
 async def close_tool_stack(stack: AsyncExitStack) -> None:
     try:
         await stack.aclose()
-    except Exception as exc:
+    except BaseException as exc:
         logger.warning("MCP cleanup failed after response generation. (%s)", exc, exc_info=True)
 
 
