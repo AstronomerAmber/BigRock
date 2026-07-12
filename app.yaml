@@ -18,6 +18,8 @@ env:
     value: 01f17b1364c914589ab9d24a70bf5b6f
   - name: ENABLE_GENIE_MCP
     value: "false"
+  - name: DISABLE_MCP_SERVERS
+    value: "true"
   - name: DATABRICKS_WAREHOUSE_ID
     value: 0bf53eaf9b66d1fd
   - name: DATABRICKS_CATALOG

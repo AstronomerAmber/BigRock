@@ -298,6 +298,8 @@ MCP_FRIENDLY_NAMES = {
 async def connect_available_mcp_servers(stack: AsyncExitStack, workspace_client: WorkspaceClient):
     available = []
     unavailable = []
+    if os.getenv("DISABLE_MCP_SERVERS", "false").strip().lower() in {"1", "true", "on", "yes"}:
+        return available, list(MCP_FRIENDLY_NAMES.values())
     for server in build_mcp_servers(workspace_client):
         name = getattr(server, "name", "tool")
         try:
