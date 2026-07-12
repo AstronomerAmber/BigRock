@@ -127,7 +127,7 @@ function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) =>
   return (
     <div className="mx-2 mt-3 space-y-2 rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Demo questions
+        Questions
       </div>
       <div className="space-y-1">
         {demoQuestions.map((question) => (
@@ -241,76 +241,13 @@ export function AppSidebar({
 """
 
 
-BOBABRICKS_SUGGESTED_ACTIONS = r"""import { motion } from 'framer-motion';
-import { memo } from 'react';
-import type { UseChatHelpers } from '@ai-sdk/react';
-import type { VisibilityType } from './visibility-selector';
-import type { ChatMessage } from '@chat-template/core';
-import { Suggestion } from './elements/suggestion';
-import { LightbulbIcon } from '@/components/icons';
-import { softNavigateToChatId } from '@/lib/navigation';
-import { useAppConfig } from '@/contexts/AppConfigContext';
+BOBABRICKS_SUGGESTED_ACTIONS = r"""import { memo } from 'react';
 
-interface SuggestedActionsProps {
-  chatId: string;
-  sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
-  selectedVisibilityType: VisibilityType;
+function PureSuggestedActions() {
+  return null;
 }
 
-function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
-  const { chatHistoryEnabled } = useAppConfig();
-  const suggestedActions = [
-    'What tools do you have?',
-    'Show average versus actual training hours for my Pacific stores and flag any stores falling behind.',
-    'What are our FY26 training goals, and how does Store 104 stack up?',
-    'Generate my weekly regional risk briefing.',
-  ];
-
-  return (
-    <div
-      data-testid="suggested-actions"
-      className="flex w-full flex-col"
-    >
-      {suggestedActions.map((suggestedAction, index) => (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ delay: 0.05 * index }}
-          key={suggestedAction}
-          className="border-b border-border"
-        >
-          <Suggestion
-            suggestion={suggestedAction}
-            variant="tertiary"
-            onClick={(suggestion) => {
-              softNavigateToChatId(chatId, chatHistoryEnabled);
-              sendMessage({
-                role: 'user',
-                parts: [{ type: 'text', text: suggestion }],
-              });
-            }}
-            className="h-auto w-full justify-start gap-2 rounded-none border-0 bg-transparent py-2 pl-0 text-left text-sm font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
-          >
-            <LightbulbIcon size={16} className="shrink-0 text-muted-foreground" aria-hidden />
-            {suggestedAction}
-          </Suggestion>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-export const SuggestedActions = memo(
-  PureSuggestedActions,
-  (prevProps, nextProps) => {
-    if (prevProps.chatId !== nextProps.chatId) return false;
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-      return false;
-
-    return true;
-  },
-);
+export const SuggestedActions = memo(PureSuggestedActions);
 """
 
 
@@ -340,6 +277,94 @@ export const Greeting = () => {
     </div>
   );
 };
+"""
+
+
+BOBABRICKS_CHAT_HEADER = r"""import { useNavigate } from 'react-router-dom';
+
+import { SidebarToggle } from '@/components/sidebar-toggle';
+import { Button } from '@/components/ui/button';
+import { TriangleAlert } from 'lucide-react';
+import { useConfig } from '@/hooks/use-config';
+import { PlusIcon } from './icons';
+import { cn } from '../lib/utils';
+import { Skeleton } from './ui/skeleton';
+
+const OBO_DOCS_URL =
+  'https://docs.databricks.com/aws/en/generative-ai/agent-framework/chat-app#enable-user-authorization';
+
+function OboScopeBanner({ missingScopes }: { missingScopes: string[] }) {
+  if (missingScopes.length === 0) return null;
+
+  return (
+    <div className="w-full border-b border-red-500/20 bg-red-50 px-4 py-2.5 dark:bg-red-950/20">
+      <div className="flex items-center gap-2">
+        <TriangleAlert className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+        <p className="text-sm text-red-700 dark:text-red-400">
+          This endpoint requires on-behalf-of user authorization. Add these
+          scopes to your app:{' '}
+          <strong>{missingScopes.join(', ')}</strong>.{' '}
+          <a
+            href={OBO_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Learn more
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function ChatHeader({
+  title,
+  empty,
+  isLoadingTitle,
+}: {
+  title?: string;
+  empty?: boolean;
+  isLoadingTitle?: boolean;
+}) {
+  const navigate = useNavigate();
+  const { oboMissingScopes } = useConfig();
+
+  return (
+    <>
+      <header
+        className={cn('sticky top-0 flex h-[60px] items-center gap-2 bg-background px-4', {
+          'border-b border-border md:pb-2': !empty,
+        })}
+      >
+        <div className="md:hidden">
+          <SidebarToggle forceOpenIcon />
+        </div>
+
+        {(title || isLoadingTitle) && (
+          <h4 className="truncate text-[16px] font-medium">
+            {isLoadingTitle ? <Skeleton className="h-6 w-32 bg-border" /> : title}
+          </h4>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="default"
+            className="order-2 ml-auto h-8 px-2 md:hidden"
+            onClick={() => {
+              navigate('/');
+            }}
+          >
+            <PlusIcon />
+            <span>New Chat</span>
+          </Button>
+        </div>
+      </header>
+
+      <OboScopeBanner missingScopes={oboMissingScopes} />
+    </>
+  );
+}
 """
 
 
@@ -431,6 +456,10 @@ class ProcessManager:
         )
         (frontend_dir / "client/src/components/greeting.tsx").write_text(
             BOBABRICKS_GREETING,
+            encoding="utf-8",
+        )
+        (frontend_dir / "client/src/components/chat-header.tsx").write_text(
+            BOBABRICKS_CHAT_HEADER,
             encoding="utf-8",
         )
         index_file = frontend_dir / "client/index.html"
