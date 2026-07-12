@@ -22,6 +22,7 @@ FRONTEND_READY = [r"Server is running on http://localhost", r"Ready"]
 BOBABRICKS_APP_SIDEBAR = r"""import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 
+import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import {
   Sidebar,
@@ -42,8 +43,8 @@ import { Action } from './elements/actions';
 
 function BobabricksResourcePanel() {
   return (
-    <div className="mt-4 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-      <section className="space-y-2">
+    <div className="px-3 pt-4 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <section className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/30 px-3 py-2.5">
         <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
           Lakebase
         </div>
@@ -64,6 +65,7 @@ function BobabricksResourcePanel() {
 const demoQuestions = [
   'What tools do you have?',
   'Show average versus actual training hours for my Pacific stores and flag any stores falling behind.',
+  'Why is store 104 behind on training?',
   'What are our FY26 training goals, and how does Store 104 stack up?',
   'Generate my weekly regional risk briefing.',
 ];
@@ -91,7 +93,7 @@ function submitDemoQuestion(question: string) {
 
 function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) => void }) {
   return (
-    <div className="mt-5 space-y-2 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+    <div className="space-y-2 px-3 pt-4 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
       <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
         Questions
       </div>
@@ -101,7 +103,7 @@ function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) =>
             key={question}
             type="button"
             onClick={() => onSelect(question)}
-            className="block w-full rounded-md px-1.5 py-1.5 text-left text-xs leading-5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="block w-full rounded-md border border-transparent px-2 py-1.5 text-left text-xs leading-5 text-muted-foreground hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             {question}
           </button>
@@ -184,17 +186,17 @@ export function AppSidebar({
         </SidebarMenu>
       </div>
 
-      {effectiveOpen && <BobabricksResourcePanel />}
-      {effectiveOpen && (
-        <BobabricksDemoQuestions
-          onSelect={(question) => {
-            setOpenMobile(false);
-            submitDemoQuestion(question);
-          }}
-        />
-      )}
-
       <SidebarContent>
+        {effectiveOpen && <BobabricksResourcePanel />}
+        {effectiveOpen && (
+          <BobabricksDemoQuestions
+            onSelect={(question) => {
+              setOpenMobile(false);
+              submitDemoQuestion(question);
+            }}
+          />
+        )}
+        {effectiveOpen && <SidebarHistory user={user} />}
       </SidebarContent>
 
       <SidebarFooter>
@@ -427,6 +429,17 @@ class ProcessManager:
             BOBABRICKS_CHAT_HEADER,
             encoding="utf-8",
         )
+        message_file = frontend_dir / "client/src/components/message.tsx"
+        if message_file.exists():
+            message_text = message_file.read_text(encoding="utf-8")
+            message_text = re.sub(
+                r"(<Shimmer className=\"flex items-center\">)(.*?)(</Shimmer>)",
+                r"\1Generating response\3",
+                message_text,
+                count=1,
+                flags=re.DOTALL,
+            )
+            message_file.write_text(message_text, encoding="utf-8")
         index_file = frontend_dir / "client/index.html"
         index_html = index_file.read_text(encoding="utf-8")
         if "window.location.pathname.startsWith('/chat/')" not in index_html:
