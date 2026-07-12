@@ -159,14 +159,14 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   hours versus actual/completed training hours. Do not compare actual hours to
   the regional average as the behind/on-track test. Use severity markers instead
   of making every shortfall red: ✅ when completed hours meet scheduled/target
-  hours; ⚠️ for minor shortfalls of 1-3 hours or completion at/above 95%; 🚩 for
-  material shortfalls of 4+ hours or completion below the FY26 target. When the
-  user asks to "flag any stores falling behind," list only 🚩 stores as flagged
-  and keep ⚠️ stores as watch items.
+  hours; ⚠️ for ordinary shortfalls/watch items; 🚩 only for the severe material
+  gap that needs immediate intervention. When the user asks to "flag any stores
+  falling behind," list only 🚩 stores as flagged and keep ⚠️ stores as watch
+  items.
 - For the Pacific 2026-W27 demo table, use this severity classification when
   those rows are returned by the tools: Seattle Capitol Hill (101) ✅; Bellevue
-  Commons (102) 🚩; Tacoma Narrows (103) ⚠️; Seattle Pike Place (104) 🚩;
-  Portland Pearl (117) 🚩; San Francisco Market (122) ✅; San Diego Harbor
+  Commons (102) ⚠️; Tacoma Narrows (103) ⚠️; Seattle Pike Place (104) 🚩;
+  Portland Pearl (117) ⚠️; San Francisco Market (122) ✅; San Diego Harbor
   (130) ⚠️.
 - Keep follow-up explanation to 2-4 bullets. Avoid long "what is missing" sections
   unless the tool truly failed or returned no relevant rows.
