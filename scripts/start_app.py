@@ -40,17 +40,6 @@ import { cn } from '@/lib/utils';
 import type { ClientSession } from '@chat-template/auth';
 import { Action } from './elements/actions';
 
-function StatusDot({ tone = 'green' }: { tone?: 'green' | 'amber' }) {
-  return (
-    <span
-      className={cn(
-        'mt-1 size-2 shrink-0 rounded-full',
-        tone === 'green' ? 'bg-emerald-500' : 'bg-amber-500',
-      )}
-    />
-  );
-}
-
 function BobabricksResourcePanel() {
   const tools = [
     ['Genie Agent', 'governed store metrics'],
@@ -60,37 +49,32 @@ function BobabricksResourcePanel() {
   ];
 
   return (
-    <div className="mx-2 mt-3 space-y-3 rounded-lg border border-sidebar-border bg-sidebar-accent/35 p-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="mt-4 space-y-5 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <section className="space-y-2">
+        <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
           Lakebase
         </div>
-        <div className="mt-1 flex items-start gap-2 text-sm">
-          <StatusDot />
-          <div>
-            <div className="font-medium">bobabricks</div>
-            <div className="text-xs leading-5 text-muted-foreground">
-              Stores regional preference and demo session memory.
-            </div>
+        <div className="px-1 text-sm">
+          <div className="font-medium">bobabricks</div>
+          <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+            Regional preference and demo session memory
           </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <section className="space-y-2">
+        <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
           Tools
         </div>
-        <div className="mt-2 space-y-2">
+        <div className="space-y-2">
           {tools.map(([name, purpose]) => (
-            <div key={name} className="text-sm">
-              <div>
-                <div className="font-medium">{name}</div>
-                <div className="text-xs leading-5 text-muted-foreground">{purpose}</div>
-              </div>
+            <div key={name} className="px-1 text-sm">
+              <div className="font-medium">{name}</div>
+              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{purpose}</div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -125,8 +109,8 @@ function submitDemoQuestion(question: string) {
 
 function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) => void }) {
   return (
-    <div className="mx-2 mt-3 space-y-2 rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="mt-5 space-y-2 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
         Questions
       </div>
       <div className="space-y-1">
@@ -135,7 +119,7 @@ function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) =>
             key={question}
             type="button"
             onClick={() => onSelect(question)}
-            className="block w-full rounded-md px-2 py-2 text-left text-xs leading-5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="block w-full rounded-md px-1.5 py-1.5 text-left text-xs leading-5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             {question}
           </button>
@@ -174,7 +158,8 @@ export function AppSidebar({
             onClick={() => setOpenMobile(false)}
             className="flex items-center overflow-hidden px-1"
           >
-            <span className="text-base font-semibold text-foreground">
+            <span className="truncate text-base font-semibold text-foreground">
+              <span aria-hidden>🧋</span>{' '}
               Bobabricks
             </span>
           </Link>
@@ -257,20 +242,18 @@ export const Greeting = () => {
   return (
     <div
       key="overview"
-      className="mx-auto flex size-full max-w-3xl flex-col justify-center px-4 mb-6 text-center"
+      className="mx-auto mb-6 flex size-full max-w-2xl flex-col justify-center px-4 text-center"
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
-        className="space-y-3"
+        className="space-y-2"
       >
-        <div className="text-2xl font-semibold md:text-3xl">🧋 Bobabricks</div>
+        <div className="text-2xl font-semibold md:text-3xl">Welcome to Bobabricks</div>
         <div className="text-sm font-medium text-muted-foreground">Powered by Databricks</div>
-        <p className="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-          Bobabricks is a premium boba tea company running a store operations demo on Databricks.
-          This assistant helps regional leaders inspect FY26 training goals, store execution risk,
-          scheduling evidence, and approval-gated follow-up tasks across Genie, StoreTime, OpsTask,
+        <p className="mx-auto max-w-xl text-sm leading-6 text-muted-foreground">
+          Ask store operations questions across Genie, StoreTime, OpsTask,
           Confluence, and Lakebase.
         </p>
       </motion.div>
