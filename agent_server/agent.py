@@ -312,6 +312,13 @@ async def connect_available_mcp_servers(stack: AsyncExitStack, workspace_client:
     return available, unavailable
 
 
+async def close_tool_stack(stack: AsyncExitStack) -> None:
+    try:
+        await stack.aclose()
+    except Exception as exc:
+        logger.warning("MCP cleanup failed after response generation. (%s)", exc, exc_info=True)
+
+
 def create_agent(mcp_servers=None, unavailable_tools=None, extra_tools=None, context_tools_enabled: bool = False) -> Agent:
     instructions = AGENT_INSTRUCTIONS
     if context_tools_enabled:
@@ -391,7 +398,9 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
             mlflow.update_current_trace(metadata={"mlflow.trace.session": session_id})
         session = maybe_create_session(session_id)
 
-        async with AsyncExitStack() as stack:
+        stack = AsyncExitStack()
+        await stack.__aenter__()
+        try:
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
@@ -401,6 +410,8 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
                 context_tools_enabled=bool(atlassian_tools),
             )
             result = await Runner.run(agent, await deduplicate_input(request, session), session=session)
+        finally:
+            await close_tool_stack(stack)
 
         return ResponsesAgentResponse(
             output=[item.to_input_item() for item in result.new_items],
@@ -426,7 +437,9 @@ async def stream_handler(request: ResponsesAgentRequest) -> AsyncGenerator[Respo
             mlflow.update_current_trace(metadata={"mlflow.trace.session": session_id})
         session = maybe_create_session(session_id)
 
-        async with AsyncExitStack() as stack:
+        stack = AsyncExitStack()
+        await stack.__aenter__()
+        try:
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
             agent = create_agent(
@@ -438,6 +451,8 @@ async def stream_handler(request: ResponsesAgentRequest) -> AsyncGenerator[Respo
             result = Runner.run_streamed(agent, input=await deduplicate_input(request, session), session=session)
             async for event in process_agent_stream_events(result.stream_events()):
                 yield event
+        finally:
+            await close_tool_stack(stack)
     except Exception as exc:
         if _is_lakebase_error(exc):
             raise HTTPException(status_code=503, detail=lakebase_access_message()) from exc
