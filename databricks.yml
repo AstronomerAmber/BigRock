@@ -1,0 +1,24 @@
+bundle:
+  name: bigrock
+
+resources:
+  apps:
+    bobabricks_store_ops_demo:
+      name: "bobabricks-store-ops-demo"
+      description: "Bobabricks Store Operations Agent demo"
+      user_api_scopes:
+        - ai-gateway
+        - genie
+        - mcp.external
+      git_repository:
+        provider: gitHub
+        url: https://github.com/AstronomerAmber/BigRock.git
+      git_source:
+        branch: main
+        source_code_path: .
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://data-ai-lakehouse.cloud.databricks.com

@@ -48,5 +48,3 @@ env:
     value: https://bobabricks-opstask-mcp-2847375137997282.aws.databricksapps.com/mcp
   - name: ATLASSIAN_MCP_URL
     value: https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282
-  - name: ATLASSIAN_MCP_BEARER_TOKEN
-    valueFrom: atlassian_mcp_bearer_token
