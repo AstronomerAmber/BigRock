@@ -41,38 +41,20 @@ import type { ClientSession } from '@chat-template/auth';
 import { Action } from './elements/actions';
 
 function BobabricksResourcePanel() {
-  const tools = [
-    ['Genie Agent', 'governed store metrics'],
-    ['StoreTime', 'training schedules and converted hours'],
-    ['OpsTask', 'approval-gated follow-ups'],
-    ['Confluence', 'FY26 goals and operating standards'],
-  ];
-
   return (
-    <div className="mt-4 space-y-5 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+    <div className="mt-4 px-3 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
       <section className="space-y-2">
         <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
           Lakebase
         </div>
         <div className="px-1 text-sm">
-          <div className="font-medium">bobabricks</div>
+          <div className="flex items-center gap-2 font-medium">
+            <span className="size-2 rounded-full bg-emerald-500" aria-hidden />
+            <span>bobabricks</span>
+          </div>
           <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
             Regional preference and demo session memory
           </div>
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <div className="px-1 text-xs font-medium uppercase text-muted-foreground">
-          Tools
-        </div>
-        <div className="space-y-2">
-          {tools.map(([name, purpose]) => (
-            <div key={name} className="px-1 text-sm">
-              <div className="font-medium">{name}</div>
-              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{purpose}</div>
-            </div>
-          ))}
         </div>
       </section>
     </div>

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from contextlib import AsyncExitStack
 from datetime import datetime
 from typing import Any, AsyncGenerator
@@ -40,6 +41,16 @@ def _enrich_agent_spans() -> None:
         orig_name = tracer._get_span_name
         orig_parse = tracer._parse_span_data
 
+        def friendly_tool_name(value):
+            if not value:
+                return value
+            text = str(value)
+            if re.fullmatch(r"query_space_[0-9a-f]+", text):
+                return "Genie Agent - query Bobabricks store metrics"
+            if re.fullmatch(r"poll_response_[0-9a-f]+", text):
+                return "Genie Agent - poll query result"
+            return value
+
         def name(span_data):
             span_type = getattr(span_data, "type", "")
             if span_type == "turn":
@@ -47,6 +58,7 @@ def _enrich_agent_spans() -> None:
             if span_type == "mcp_tools":
                 return f"MCP: list tools ({getattr(span_data, 'server', '?')})"
             existing = getattr(span_data, "name", None)
+            existing = friendly_tool_name(existing)
             return existing if existing else orig_name(span_data)
 
         def parse(span_data):
@@ -54,7 +66,10 @@ def _enrich_agent_spans() -> None:
             attributes = dict(attributes or {})
             span_type = getattr(span_data, "type", "")
             if span_type == "mcp_tools":
-                tools = list(getattr(span_data, "result", None) or [])
+                tools = [
+                    friendly_tool_name(tool)
+                    for tool in list(getattr(span_data, "result", None) or [])
+                ]
                 attributes["server"] = getattr(span_data, "server", None)
                 attributes["tool_count"] = len(tools)
                 outputs = {"tools": tools}
@@ -63,6 +78,13 @@ def _enrich_agent_spans() -> None:
                 attributes["agent"] = getattr(span_data, "agent_name", None)
                 if getattr(span_data, "usage", None):
                     attributes["usage"] = span_data.usage
+            if attributes.get("name"):
+                attributes["name"] = friendly_tool_name(attributes["name"])
+            if isinstance(inputs, dict):
+                inputs = {
+                    key: friendly_tool_name(value) if key in {"name", "tool", "tool_name"} else value
+                    for key, value in inputs.items()
+                }
             return inputs, outputs, attributes
 
         tracer._get_span_name = name
