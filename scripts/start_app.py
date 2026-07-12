@@ -432,6 +432,39 @@ class ProcessManager:
         message_file = frontend_dir / "client/src/components/message.tsx"
         if message_file.exists():
             message_text = message_file.read_text(encoding="utf-8")
+            if "function bobabricksToolDisplayName" not in message_text:
+                message_text = message_text.replace(
+                    "const PurePreviewMessage = ({",
+                    """function bobabricksToolDisplayName(toolName: string) {
+  if (/^query_space_[0-9a-f]+$/.test(toolName)) {
+    return 'Genie Space - query Bobabricks store metrics';
+  }
+  if (/^poll_response_[0-9a-f]+$/.test(toolName)) {
+    return 'Genie Space - poll query result';
+  }
+  return toolName;
+}
+
+const PurePreviewMessage = ({""",
+                    1,
+                )
+            if "const displayToolName = bobabricksToolDisplayName(toolName);" not in message_text:
+                message_text = message_text.replace(
+                    "  const { toolCallId, input, state, errorText, output, toolName } = part;\n",
+                    "  const { toolCallId, input, state, errorText, output, toolName } = part;\n"
+                    "  const displayToolName = bobabricksToolDisplayName(toolName);\n",
+                    1,
+                )
+            message_text = message_text.replace(
+                "          toolName={toolName}",
+                "          toolName={displayToolName}",
+                1,
+            )
+            message_text = message_text.replace(
+                "      <ToolHeader type={toolName} state={effectiveState} />",
+                "      <ToolHeader type={displayToolName} state={effectiveState} />",
+                1,
+            )
             message_text = re.sub(
                 r"(<Shimmer className=\"flex items-center\">)(.*?)(</Shimmer>)",
                 r"\1Generating response\3",
