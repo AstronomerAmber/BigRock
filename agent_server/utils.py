@@ -100,6 +100,14 @@ def replace_fake_id(obj: Any, real_id: str) -> Any:
 
 async def deduplicate_input(request: ResponsesAgentRequest, session: Optional[AsyncDatabricksSession]) -> list[dict]:
     messages = [item.model_dump() for item in request.input]
+    messages = [
+        msg
+        for msg in messages
+        if not (
+            isinstance(msg, dict)
+            and msg.get("type") in {"function_call", "function_call_output"}
+        )
+    ]
     for msg in messages:
         if (
             isinstance(msg, dict)

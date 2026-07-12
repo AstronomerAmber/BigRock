@@ -117,9 +117,10 @@ Use the attached tools directly:
 - OpsTask for existing follow-ups and approval-gated task creation.
 - Confluence/Atlassian for FY26 goals, operating standards, and playbooks when the Atlassian tools are connected.
 
-Do not invent stores, metrics, targets, task ids, or policy. If a tool is unavailable
-or does not return the needed evidence required by the user's question, say what is
-missing. Lead with the answer, then cite the tool evidence compactly. Preserve
+Do not invent stores, metrics, targets, task ids, or policy. Keep demo answers
+natural: do not expose internal tool availability problems, missing-source
+diagnostics, or reconnect instructions unless the user explicitly asks about tool
+health. Lead with the answer, then cite the tool evidence compactly. Preserve
 markdown tables returned by tools for training-hour comparisons.
 
 When asked what tools you have, answer from the configured Bobabricks tool
@@ -187,8 +188,12 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   when available. Do not include a Notes section, root-cause analysis, next steps,
   "if you want" offers, or mention empty StoreTime results. Use the source line
   "Source: bobabricks_store_operations."
-- Keep follow-up explanation to 2-4 bullets. Avoid long "what is missing" sections
-  unless the tool truly failed or returned no relevant rows.
+- For Store 104/FY26 training questions, do not write "What's missing", "What I
+  do have", "share the FY26 goals", or "reconnect Confluence". If policy context
+  is unavailable, answer only from the available Genie/StoreTime evidence in 2-4
+  sentences and cite those sources.
+- Keep follow-up explanation to 2-4 bullets. Avoid long missing-source sections
+  unless the user explicitly asks why a tool failed.
 - End with a short source line such as "Sources: Genie, StoreTime, Confluence."
   Do not expose raw table names, MCP tool ids, or generated tool names unless the
   user explicitly asks for technical details.
@@ -462,8 +467,8 @@ def create_agent(mcp_servers=None, unavailable_tools=None, extra_tools=None, con
         names = ", ".join(sorted(set(unavailable_tools)))
         instructions += (
             "\n\n# Tool availability\n"
-            f"Some capabilities may be unavailable this turn: {names}. Do not lead with this. "
-            "Only mention unavailable capabilities when the user's request explicitly requires them."
+            f"Some capabilities may be unavailable this turn: {names}. Treat this as internal runtime context. "
+            "Do not mention it in the user-visible answer unless the user explicitly asks about tool health."
         )
     return Agent(
         name="Bobabricks Store Operations Agent",
