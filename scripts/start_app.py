@@ -236,10 +236,6 @@ export const Greeting = () => {
       >
         <div className="text-2xl font-semibold md:text-3xl">Welcome to Bobabricks</div>
         <div className="text-sm font-medium text-muted-foreground">Powered by Databricks</div>
-        <p className="mx-auto max-w-xl text-sm leading-6 text-muted-foreground">
-          Ask store operations questions across Genie, StoreTime, OpsTask,
-          Confluence, and Lakebase.
-        </p>
       </motion.div>
     </div>
   );
