@@ -67,8 +67,9 @@ const demoQuestions = [
   'Show average versus actual training hours for my Pacific stores and flag any stores falling behind.',
   'Why is store 104 behind on training?',
   'What are our FY26 training goals, and how does Store 104 stack up?',
-  'Generate my weekly regional risk briefing.',
 ];
+
+const weeklyBriefingPrompt = 'Generate my weekly regional risk briefing.';
 
 function submitDemoQuestion(question: string) {
   const send = () => {
@@ -109,6 +110,20 @@ function BobabricksDemoQuestions({ onSelect }: { onSelect: (question: string) =>
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function BobabricksBriefingAction({ onSelect }: { onSelect: (question: string) => void }) {
+  return (
+    <div className="px-3 pt-4 text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+      <button
+        type="button"
+        onClick={() => onSelect(weeklyBriefingPrompt)}
+        className="w-full rounded-md border border-sidebar-border bg-sidebar-accent px-3 py-2 text-left text-sm font-medium text-sidebar-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+      >
+        Generate Weekly Regional Briefing
+      </button>
     </div>
   );
 }
@@ -188,6 +203,14 @@ export function AppSidebar({
 
       <SidebarContent>
         {effectiveOpen && <BobabricksResourcePanel />}
+        {effectiveOpen && (
+          <BobabricksBriefingAction
+            onSelect={(question) => {
+              setOpenMobile(false);
+              submitDemoQuestion(question);
+            }}
+          />
+        )}
         {effectiveOpen && (
           <BobabricksDemoQuestions
             onSelect={(question) => {
