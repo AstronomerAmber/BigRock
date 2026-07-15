@@ -22,6 +22,8 @@ REQUIRED_FILES = [
     "data/confluence_playbooks.json",
     "data/ops_tasks.json",
     "scripts/generate_sample_briefing.py",
+    "app/services/store_ops.py",
+    "tests/test_store_ops.py",
 ]
 
 REQUIRED_TEXT = {
@@ -34,11 +36,18 @@ REQUIRED_TEXT = {
         "Ask for explicit approval before creating any task",
     ],
     "agent-store-ops/mcp_servers.yaml": [
-        "atlassian_confluence_mcp",
+        "managed_atlassian_mcp",
+        "CONFLUENCE_MCP_ENABLED:-true",
+        "databricks_app_mcp",
         "FY26 Store Operations Goals",
         "Inventory Stockout Escalation Playbook",
     ],
     "app/app.yaml": ["Generate Weekly Regional Briefing"],
+    "app/services/store_ops.py": [
+        "class StoreOpsEngine",
+        "class OpsTaskClient",
+        "draft_high_severity_tasks",
+    ],
 }
 
 

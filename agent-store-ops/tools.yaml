@@ -1,7 +1,7 @@
 tools:
   - name: query_store_metrics
     server: genie_agent
-    purpose: Retrieve sales, training, customer experience, and store performance metrics.
+    purpose: Retrieve sales, training, customer experience, inventory, and store performance metrics.
     read_only: true
 
   - name: inspect_schedule
@@ -24,11 +24,13 @@ tools:
     server: confluence
     purpose: Retrieve FY26 goals and operating playbooks.
     read_only: true
+    enabled_by_default: true
 
   - name: assess_inventory_risk
-    server: inventory
-    purpose: Detect likely ingredient stockout risks and inventory-driven root causes.
+    server: inventory_app
+    purpose: Detect likely ingredient stockout risks and inventory-driven root causes from the deployed Inventory MCP.
     read_only: true
+    fallback_server: genie_agent
 
   - name: remember_preference
     server: memory
