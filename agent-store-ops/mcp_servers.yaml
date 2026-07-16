@@ -29,40 +29,14 @@ mcp_servers:
       tables:
         ops_tasks: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.ops_tasks
 
-  confluence:
-    type: managed_atlassian_mcp
-    enabled: ${CONFLUENCE_MCP_ENABLED:-true}
-    description: FY26 goals, operating playbooks, and store procedures.
-    config:
-      server_url: ${ATLASSIAN_MCP_URL:-https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282}
-      http_headers:
-        Authorization: Bearer ${ATLASSIAN_MCP_BEARER_TOKEN}
-      spaces:
-        - "~7120205a9b4c00e0154b0694abeb4e6b2c89bb"
-      required_pages:
-        - Bobabricks — FY26 Store Operations Goals & Operating Standards
-        - Training Completion Operating Standard
-        - Inventory Stockout Escalation Playbook
-        - Pacific Region Weekly Review Playbook
-      required_page_urls:
-        - https://databricks.atlassian.net/wiki/x/gACwhwE
-    notes: >-
-      Enabled for the deployed demo so the agent can retrieve company goals and operating playbooks through the managed Atlassian MCP. Set CONFLUENCE_MCP_ENABLED=false only for local rehearsals that intentionally show a company-context gap.
-
   inventory_app:
     type: databricks_app_mcp
-    enabled: ${INVENTORY_APP_MCP_ENABLED:-true}
-    description: Optional final-pass Inventory MCP for ingredient availability, depletion forecasts, and likely stockout risk.
+    enabled: ${INVENTORY_APP_MCP_ENABLED:-false}
+    description: Optional Inventory MCP for ingredient availability, depletion forecasts, and likely stockout risk.
     config:
       app_name: ${INVENTORY_APP_NAME:-bobabricks-inventory-mcp}
       endpoint_path: /mcp
       tables:
         inventory: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.inventory
     notes: >-
-      Enabled for the deployed demo so Inventory appears as its own operational tool for ingredient availability, depletion forecasts, and stockout risk. Genie remains the governed analytics path for first-pass inventory facts.
-
-  memory:
-    type: lakebase_memory
-    description: User preference and regional context memory.
-    config:
-      table: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.bobabricks_agent_memory
+      Disabled for the short demo: Inventory is never surfaced as its own tool. The app code lives in mcp-apps/inventory and can be re-enabled with INVENTORY_APP_MCP_ENABLED=true for the long version (see archive/long-version/). Genie remains the governed analytics path for inventory facts.

@@ -6,7 +6,7 @@ This directory contains small Databricks App MCP services for the Store Operatio
 
 - `storetime` exposes `inspect_schedule` and `list_training_events` over `schedules`, `training_events`, and `storetime_shifts`.
 - `opstask` exposes `list_existing_ops_tasks` and `create_ops_task` over `ops_tasks`.
-- `inventory` exposes `assess_inventory_risk` over `inventory`.
+- `inventory` exposes `assess_inventory_risk` over `inventory`. **Long version only** — the short demo keeps this disabled (`INVENTORY_APP_MCP_ENABLED=false`) and never surfaces Inventory as a tool. Deploy it only when running the `archive/long-version/` demo.
 
 Each service exposes a JSON-RPC MCP endpoint at `/mcp` and a health check at `/`.
 

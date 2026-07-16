@@ -204,7 +204,7 @@ def main() -> None:
 
     namespace = f"{args.catalog}.{args.schema}"
     execute_sql(args.profile, args.warehouse_id, f"CREATE CATALOG IF NOT EXISTS {args.catalog}")
-    execute_sql(args.profile, args.warehouse_id, f"CREATE SCHEMA IF NOT EXISTS {namespace} COMMENT 'Bobabricks store operations demo data for Genie, StoreTime, Inventory, OpsTask, and Lakebase memory capabilities'")
+    execute_sql(args.profile, args.warehouse_id, f"CREATE SCHEMA IF NOT EXISTS {namespace} COMMENT 'Bobabricks store operations demo data for Genie, StoreTime, Inventory, and OpsTask capabilities'")
 
     ddl = {
         "store_metrics": """region STRING, store_id STRING, store_name STRING, sales_vs_plan_pct DOUBLE, training_completion_pct DOUBLE, avg_wait_minutes DOUBLE, customer_satisfaction DOUBLE""",
@@ -219,7 +219,6 @@ def main() -> None:
         "inventory": """store_id INT, ingredient STRING, on_hand_units DOUBLE, forecast_7d_units DOUBLE, reorder_eta_days DOUBLE, stockout_risk STRING, supplier STRING""",
         "customer_feedback": """feedback_id STRING, store_id INT, feedback_date DATE, topic STRING, rating INT, comment_summary STRING""",
         "ops_tasks": """task_id STRING, store_id INT, title STRING, description STRING, category STRING, severity STRING, status STRING, created_date DATE, owner STRING""",
-        "bobabricks_agent_memory": """user_id STRING, memory_key STRING, memory_value STRING, updated_at TIMESTAMP""",
     }
 
     for table, columns in ddl.items():

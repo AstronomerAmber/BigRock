@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from app.services.store_ops import LocalDataStore, StoreOpsEngine, OpsTaskClient
+from app.services.store_ops import LocalDataStore, StoreOpsEngine
 
 
 class StoreOpsEngineTest(unittest.TestCase):
@@ -8,35 +9,38 @@ class StoreOpsEngineTest(unittest.TestCase):
         self.data_store = LocalDataStore()
         self.engine = StoreOpsEngine(self.data_store)
 
-    def test_weekly_pacific_briefing_uses_expected_categories_and_order(self):
-        issues = self.engine.build_weekly_briefing("Pacific")
+    def test_pacific_metrics_include_store_104(self):
+        metrics = self.data_store.store_metrics("Pacific")
+        store_ids = {row["store_id"] for row in metrics}
+        self.assertIn("104", store_ids)
 
-        self.assertGreaterEqual(len(issues), 4)
-        self.assertEqual("high", issues[0].severity)
-        self.assertTrue(
-            {issue.category for issue in issues}.issubset(
-                {"sales", "labor", "inventory", "training", "customer_experience"}
-            )
-        )
-        self.assertIn(("104", "training", "high"), [(issue.store_id, issue.category, issue.severity) for issue in issues])
-        self.assertIn(("117", "inventory", "high"), [(issue.store_id, issue.category, issue.severity) for issue in issues])
+    def test_store_104_is_behind_on_training(self):
+        playbooks = self.data_store.playbooks()
+        target = float(playbooks["FY26 Store Operations Goals"]["training_completion_target_pct"])
+        metrics = {row["store_id"]: row for row in self.data_store.store_metrics("Pacific")}
+        completion = float(metrics["104"]["training_completion_pct"])
+        self.assertLess(completion, target)
 
-    def test_task_drafts_skip_duplicate_open_tasks(self):
-        issues = self.engine.build_weekly_briefing("Pacific")
-        existing_tasks = OpsTaskClient(self.data_store).list_tasks()
+    def test_tool_status_reflects_short_demo_tools(self):
+        with patch.dict("os.environ", {"CONFLUENCE_MCP_ENABLED": "false"}, clear=False):
+            tool_status = {row["tool"]: row["status"] for row in self.engine.tool_status()}
 
-        drafts = self.engine.draft_high_severity_tasks(issues, existing_tasks)
-
-        self.assertEqual(["117", "117"], [draft.store_id for draft in drafts])
-        self.assertTrue(all(draft.severity == "high" for draft in drafts))
-
-    def test_tool_status_defaults_to_deployed_capabilities(self):
-        tool_status = {row["tool"]: row["status"] for row in self.engine.tool_status()}
-
+        # Short demo baseline surfaces exactly these tools; Inventory MCP,
+        # Confluence, and Lakebase memory are not listed as tools.
+        self.assertEqual({"Genie Agent", "StoreTime", "OpsTask"}, set(tool_status))
         self.assertEqual("configured", tool_status["Genie Agent"])
-        self.assertEqual("enabled", tool_status["Confluence"])
-        self.assertEqual("enabled", tool_status["Inventory MCP"])
-        self.assertEqual("approval-gated", tool_status["OpsTask"])
+        self.assertNotIn("Confluence", tool_status)
+        self.assertNotIn("Inventory MCP", tool_status)
+        self.assertNotIn("Lakebase memory", tool_status)
+
+    def test_tool_status_adds_confluence_after_upgrade(self):
+        with patch.dict("os.environ", {"CONFLUENCE_MCP_ENABLED": "true"}, clear=False):
+            tool_status = {row["tool"]: row["status"] for row in self.engine.tool_status()}
+
+        self.assertEqual("configured", tool_status["Confluence"])
+        self.assertIn("Genie Agent", tool_status)
+        self.assertIn("StoreTime", tool_status)
+        self.assertIn("OpsTask", tool_status)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 name: agent-store-ops
-description: Bobabricks Store Operations Agent for regional risk briefings.
+description: Bobabricks Store Operations Agent for store performance Q&A.
 version: 0.1.0
 
 model:
@@ -14,13 +14,4 @@ sample_data_dir: ../data
 
 capabilities:
   - baseline_store_operations_qa
-  - weekly_regional_risk_briefing
-  - inventory_stockout_risk_detection
-  - confluence_goal_and_playbook_lookup
-  - approval_gated_ops_task_creation
-  - lakebase_memory_preferences
-
-app_actions:
-  - id: generate_weekly_regional_briefing
-    label: Generate Weekly Regional Briefing
-    prompt: Generate my weekly regional risk briefing and create follow-up tasks for high-severity items.
+  - confluence_goal_and_playbook_lookup_after_upgrade

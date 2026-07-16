@@ -250,24 +250,22 @@ class StoreOpsEngine:
         return "\n".join(lines)
 
     def tool_status(self) -> list[dict[str, str]]:
-        confluence_enabled = os.getenv("CONFLUENCE_MCP_ENABLED", "true").lower() == "true"
-        inventory_mcp_enabled = os.getenv("INVENTORY_APP_MCP_ENABLED", "true").lower() == "true"
-        return [
-            {"tool": "Genie Agent", "status": "configured", "purpose": "governed store metrics and first-pass inventory"},
+        # Confluence/Atlassian is enabled only by the live upgrade and is not
+        # surfaced in the baseline demo tool listing.
+        tools = [
+            {"tool": "Genie Agent", "status": "configured", "purpose": "governed store metrics"},
             {"tool": "StoreTime", "status": "configured", "purpose": "schedules and training conversion"},
-            {"tool": "OpsTask", "status": "approval-gated", "purpose": "list and create follow-ups"},
-            {
-                "tool": "Confluence",
-                "status": "enabled" if confluence_enabled else "disabled",
-                "purpose": "FY26 goals and playbooks",
-            },
-            {
-                "tool": "Inventory MCP",
-                "status": "enabled" if inventory_mcp_enabled else "fallback to Genie",
-                "purpose": "ingredient stockout risk",
-            },
-            {"tool": "Lakebase memory", "status": "configured", "purpose": "stable user preferences"},
+            {"tool": "OpsTask", "status": "configured", "purpose": "list follow-up tickets"},
         ]
+        if os.getenv("CONFLUENCE_MCP_ENABLED", "false").strip().lower() in {"1", "true", "on", "yes"}:
+            tools.append(
+                {
+                    "tool": "Confluence",
+                    "status": "configured",
+                    "purpose": "FY26 goals and operating playbooks",
+                }
+            )
+        return tools
 
     @staticmethod
     def _training_severity(completion_pct: float, target_pct: float) -> str:

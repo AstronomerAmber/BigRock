@@ -106,6 +106,7 @@ OPSTASK_MCP_URL = os.getenv("OPSTASK_MCP_URL", "https://bobabricks-opstask-mcp-2
 ATLASSIAN_MCP_URL = os.getenv("ATLASSIAN_MCP_URL")
 ATLASSIAN_OFF_SENTINELS = {"", "off", "none", "disabled", "false"}
 ATLASSIAN_FRIENDLY_NAME = "Atlassian Confluence"
+CONFLUENCE_MCP_ENABLED = os.getenv("CONFLUENCE_MCP_ENABLED", "false").strip().lower() in {"1", "true", "on", "yes"}
 USE_SDK_MCP_SERVERS = os.getenv("USE_SDK_MCP_SERVERS", "false").strip().lower() in {"1", "true", "on", "yes"}
 
 AGENT_INSTRUCTIONS = """\
@@ -114,7 +115,7 @@ You are the Bobabricks Store Operations Agent for regional store leaders.
 Use the attached tools directly:
 - Genie Space for governed Bobabricks store metrics, training completion, wait time, and regional performance.
 - StoreTime for schedules, training blocks, converted hours, and coverage reasons.
-- OpsTask for existing follow-ups and approval-gated task creation.
+- OpsTask for existing follow-up tickets and task tracking.
 - Confluence/Atlassian for FY26 goals, operating standards, and playbooks when the Atlassian tools are connected.
 
 Do not invent stores, metrics, targets, task ids, or policy. Keep demo answers
@@ -127,7 +128,9 @@ When asked what tools you have, answer from the configured Bobabricks tool
 context in a clean demo style. Do not call a tool for this question. Do not use
 the phrase "Bobabricks tool inventory." Do not use "Available" or "Unavailable"
 headings. Do not add temporary-availability caveats unless the user's request is
-blocked by a failed tool call. Mention four connected tools plus Lakebase memory.
+blocked by a failed tool call. List only the connected data and MCP tools; do not
+list Confluence/Atlassian unless the Atlassian tools are connected. Never list
+Lakebase memory or a current-time utility as tools.
 Use one compact markdown table and normal body text only. Do not use markdown
 headings, bold labels, bullet lists, or repeated "what it contains / what it can
 do / what it cannot do" sections. The table columns should be: Tool, Name,
@@ -143,12 +146,6 @@ Use these rows:
 - Tool OpsTask; Name bobabricks-opstask-mcp; Contains follow-up lookup and task
   creation tools; Can list follow-ups and create tasks after approval; Cannot
   create silently or diagnose root cause alone.
-- Tool Confluence; Name Databricks Atlassian MCP; Contains FY26 goals, standards,
-  playbooks; Can retrieve policy/playbook context; Cannot query metrics, inspect
-  schedules, or create tasks.
-- Tool Lakebase memory; Name bobabricks / projects/bobabricks; Contains selected
-  region and demo session context; Can remember preferences across questions;
-  Cannot provide metrics, policy, or schedule evidence.
 
 For Bobabricks demo questions, prefer compact answer-first output. Do not print a
 separate hardcoded "Tool call order" section; the trace is the source of truth for
@@ -194,7 +191,8 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   sentences and cite those sources.
 - Keep follow-up explanation to 2-4 bullets. Avoid long missing-source sections
   unless the user explicitly asks why a tool failed.
-- End with a short source line such as "Sources: Genie, StoreTime, Confluence."
+- End with a short source line such as "Sources: Genie, StoreTime." Add
+  Confluence only after the Atlassian tools are connected and used.
   Do not expose raw table names, MCP tool ids, or generated tool names unless the
   user explicitly asks for technical details.
 """
@@ -204,6 +202,10 @@ CONTEXT_INSTRUCTIONS = """\
 # Company policy & documentation
 Use Confluence as the source of truth for FY26 training goals, operating standards,
 thresholds, and required actions. Always ground store metrics in Genie or StoreTime.
+When asked what tools you have after Confluence is connected, include this row in
+the same compact table format: Tool Confluence; Name managed Atlassian MCP;
+Contains FY26 goals, operating standards, training playbooks; Can do company
+context lookup; Cannot change store data or tasks.
 """
 
 
@@ -218,6 +220,8 @@ def _genie_mcp_url() -> str:
 
 
 def _atlassian_url() -> str:
+    if not CONFLUENCE_MCP_ENABLED:
+        return ""
     if ATLASSIAN_MCP_URL is None:
         return ""
     if ATLASSIAN_MCP_URL.strip().lower() in ATLASSIAN_OFF_SENTINELS:

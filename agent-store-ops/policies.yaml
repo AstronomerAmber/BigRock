@@ -1,26 +1,5 @@
 policies:
-  approval_gates:
-    - tool: create_ops_task
-      rule: user_explicit_approval_required
-      message: Ask the user before creating OpsTask follow-up tickets.
-
   budget_guardrails:
     gateway: unity_ai_gateway
     mode: platform_enforced
-    demo_script: ../BUDGET_GUARDRAIL_SCRIPT.md
-    note: Keep model unchanged; demonstrate budget control at the platform layer.
-
-  response_requirements:
-    weekly_regional_risk_briefing:
-      required_fields:
-        - store
-        - severity
-        - category
-        - evidence
-        - recommended_action
-      allowed_categories:
-        - sales
-        - labor
-        - inventory
-        - training
-        - customer_experience
+    note: Budgets and usage are enforced and attributed at the Unity AI Gateway layer, per agent and per team. Shown in the demo under AI Gateway budgets and the usage dashboard.

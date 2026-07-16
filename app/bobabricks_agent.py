@@ -11,6 +11,7 @@ GENIE_SPACE_ID = os.environ.get("GENIE_SPACE_ID", "01f17b1364c914589ab9d24a70bf5
 STORETIME_MCP_URL = os.environ.get("STORETIME_MCP_URL", "").strip()
 OPSTASK_MCP_URL = os.environ.get("OPSTASK_MCP_URL", "").strip()
 ATLASSIAN_MCP_URL = os.environ.get("ATLASSIAN_MCP_URL", "").strip()
+CONFLUENCE_MCP_ENABLED = os.environ.get("CONFLUENCE_MCP_ENABLED", "false").strip().lower() in {"1", "true", "on", "yes"}
 
 
 AGENT_INSTRUCTIONS = """\
@@ -19,16 +20,13 @@ You are the Bobabricks Store Operations Agent for regional store leaders.
 Use the attached tools directly:
 - Genie for governed Bobabricks store metrics, training completion, wait time, and regional performance.
 - StoreTime for schedules, training blocks, converted hours, and coverage reasons.
-- OpsTask for existing follow-ups and approval-gated task creation.
-- Confluence/Atlassian for FY26 goals, operating standards, and playbooks.
+- OpsTask for existing follow-up tickets and task tracking.
+- Confluence/Atlassian for FY26 goals, operating standards, and playbooks only when enabled by the live upgrade.
 
 Do not invent stores, metrics, targets, task ids, or policy. If a tool is unavailable
 or does not return the needed evidence, say what is missing. Lead with the answer,
 then cite the tool evidence compactly. Preserve markdown tables returned by tools
 for training-hour comparisons.
-
-OpsTask creation remains governed: describe the task you would create and wait for
-explicit approval when the UI requires approval.
 """
 
 
@@ -94,7 +92,7 @@ def _genie_mcp_url(workspace_client: WorkspaceClient) -> str:
 
 def _tool_workspace_client() -> WorkspaceClient:
     # In Databricks Apps, this uses the app service principal. The app resources grant
-    # access to Genie, StoreTime, OpsTask, and Lakebase.
+    # access to Genie, StoreTime, and OpsTask.
     return WorkspaceClient()
 
 
@@ -124,7 +122,7 @@ def _build_mcp_servers(workspace_client: WorkspaceClient):
                 workspace_client=workspace_client,
             )
         )
-    if ATLASSIAN_MCP_URL:
+    if CONFLUENCE_MCP_ENABLED and ATLASSIAN_MCP_URL:
         servers.append(
             McpServer(
                 url=ATLASSIAN_MCP_URL,

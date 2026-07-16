@@ -19,21 +19,3 @@ tools:
     purpose: Create follow-up tickets for approved high-severity risks.
     read_only: false
     requires_user_approval: true
-
-  - name: search_confluence
-    server: confluence
-    purpose: Retrieve FY26 goals and operating playbooks.
-    read_only: true
-    enabled_by_default: true
-
-  - name: assess_inventory_risk
-    server: inventory_app
-    purpose: Detect likely ingredient stockout risks and inventory-driven root causes from the deployed Inventory MCP.
-    read_only: true
-    fallback_server: genie_agent
-
-  - name: remember_preference
-    server: memory
-    purpose: Store stable user preferences.
-    read_only: false
-    requires_user_approval: false

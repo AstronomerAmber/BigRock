@@ -25,6 +25,8 @@ OPSTASK_MCP_URL = os.environ.get(
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "0bf53eaf9b66d1fd").strip()
 DATABRICKS_CATALOG = os.environ.get("DATABRICKS_CATALOG", "bobabricks_demo").strip()
 DATABRICKS_SCHEMA = os.environ.get("DATABRICKS_SCHEMA", "store_ops").strip()
+CONFLUENCE_MCP_ENABLED = os.environ.get("CONFLUENCE_MCP_ENABLED", "false").strip().lower() in {"1", "true", "on", "yes"}
+ATLASSIAN_MCP_URL = os.environ.get("ATLASSIAN_MCP_URL", "").strip()
 
 
 def configure_mlflow_autologging() -> None:
@@ -105,11 +107,8 @@ st.markdown(
 def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngine, ops_tasks: OpsTaskClient, status_rows: list[dict]) -> str:
     lowered = prompt.lower()
     st.session_state["tool_status"] = None
-    st.session_state["pending_drafts"] = []
-    st.session_state["existing_tasks"] = None
-    st.session_state["created_tasks"] = []
 
-    if "tool" in lowered and "weekly" not in lowered:
+    if "tool" in lowered:
         return render_live_tool_registry(selected_region, engine, status_rows)
 
     if is_training_hours_comparison(prompt):
@@ -118,42 +117,17 @@ def response_for_prompt(prompt: str, selected_region: str, engine: StoreOpsEngin
     if "fy26" in lowered or "goal" in lowered or "standard" in lowered:
         return render_fy26_goals_markdown(selected_region, engine)
 
-    if "weekly" in lowered and "briefing" in lowered:
-        existing_tasks = ops_tasks.list_tasks()
-        issues = engine.build_weekly_briefing(selected_region)
-        drafts = engine.draft_high_severity_tasks(issues, existing_tasks)
-        st.session_state["pending_drafts"] = drafts
-        st.session_state["existing_tasks"] = existing_tasks
-        return engine.render_briefing_markdown(selected_region, issues, drafts)
-
     if "104" in lowered and "training" in lowered:
         return (
             "Store 104 is behind because scheduled training time was converted to rush-window service coverage. "
             "That is a completion/utilization issue, not a scheduling issue.\n\n"
-            "StoreTime evidence should show converted training hours and a rush-window coverage reason. "
-            "The right follow-up is to protect non-rush training blocks and only create an OpsTask after approval."
-        )
-
-    if "create tasks" in lowered or "now create" in lowered:
-        drafts = st.session_state.get("pending_drafts", [])
-        if not drafts:
-            issues = engine.build_weekly_briefing(selected_region)
-            drafts = engine.draft_high_severity_tasks(issues, ops_tasks.list_tasks())
-        st.session_state["pending_drafts"] = drafts
-        return "I found high-severity follow-ups ready for approval. Use the approval button below to create OpsTask tickets."
-
-    if "propose" in lowered or "do not create" in lowered:
-        issues = engine.build_weekly_briefing(selected_region)
-        drafts = engine.draft_high_severity_tasks(issues, ops_tasks.list_tasks())
-        return (
-            "Proposed actions only:\n\n"
-            + "\n".join(f"- {draft.store_id}: {draft.title}" for draft in drafts)
-            + "\n\nNo OpsTask tickets have been created."
+            "StoreTime evidence shows converted training hours and a rush-window coverage reason. "
+            "The right follow-up is to protect non-rush training blocks for the Store 104 team."
         )
 
     return (
-        "Ask for available tools, a weekly regional risk briefing, Store 104 training diagnostics, "
-        "FY26 operating standards, or approval-gated OpsTask creation."
+        "Ask for available tools, average versus actual training hours, Store 104 training diagnostics, "
+        "or FY26 operating standards."
     )
 
 
@@ -427,7 +401,6 @@ def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
         f"### {region} training hours",
         "",
         "**Evidence used**",
-        "- **Confluence:** FY26 training completion target.",
         f"- **Genie/data resource:** store-level training completion metrics from `{DATABRICKS_CATALOG}.{DATABRICKS_SCHEMA}.store_metrics`.",
         f"- **StoreTime:** scheduled, completed, and converted training hours from {storetime_source}.",
         "",
@@ -472,6 +445,15 @@ def render_training_hours_markdown(region: str, engine: StoreOpsEngine) -> str:
 
 
 def render_fy26_goals_markdown(region: str, engine: StoreOpsEngine) -> str:
+    if not CONFLUENCE_MCP_ENABLED:
+        return (
+            "I can compare Store 104's training performance from Genie and StoreTime, but I do not have a company-context "
+            "tool connected yet for the FY26 training goals or operating standards. Store 104 is the clearest Pacific-region "
+            "training issue: completed training is behind schedule because protected training blocks were converted to "
+            "rush-window service coverage.\n\n"
+            "Sources: Genie, StoreTime."
+        )
+
     playbooks = engine.data_store.playbooks()
     goals = playbooks["FY26 Store Operations Goals"]
     training_standard = playbooks["Training Completion Operating Standard"]["guidance"]
@@ -569,25 +551,20 @@ def render_live_tool_registry(
             }
         )
 
-    confluence_enabled = os.getenv("CONFLUENCE_MCP_ENABLED", "true").lower() == "true"
-    atlassian_url = os.getenv("ATLASSIAN_MCP_URL", "")
-    checks.append(
-        {
-            "tool": "Confluence",
-            "status": "configured" if confluence_enabled and atlassian_url else "not configured",
-            "purpose": "FY26 goals and playbooks",
-            "evidence": "Atlassian MCP URL configured." if atlassian_url else "No Atlassian MCP URL in app env.",
-        }
-    )
+    if CONFLUENCE_MCP_ENABLED:
+        checks.append(
+            {
+                "tool": "Confluence",
+                "status": "configured" if ATLASSIAN_MCP_URL else "not configured",
+                "purpose": "FY26 goals and operating playbooks",
+                "evidence": "Managed Atlassian MCP enabled for this deployment."
+                if ATLASSIAN_MCP_URL
+                else "No ATLASSIAN_MCP_URL in app env.",
+            }
+        )
 
-    checks.append(
-        {
-            "tool": "Lakebase memory",
-            "status": "reachable" if memory_status.enabled else "unreachable",
-            "purpose": "stable user preferences",
-            "evidence": memory_status.message,
-        }
-    )
+    # Confluence/Atlassian is intentionally absent from the baseline tool inventory
+    # and only appears after the live upgrade enables it.
 
     if persist_to_session:
         st.session_state["tool_status"] = checks
@@ -708,14 +685,18 @@ def build_agent_messages(prompt: str, prior_messages: list[dict], selected_regio
     tool_context = "\n".join(
         f"- {row['tool']} ({row['status']}): {row['purpose']}" for row in status_rows
     )
+    confluence_guidance = (
+        "Confluence is connected for FY26 standards and operating playbooks. "
+        if CONFLUENCE_MCP_ENABLED
+        else "Confluence is not connected in the baseline demo; if FY26 standards are needed, say that no company-context tool is available yet. "
+    )
     system_context = (
         "You are the Bobabricks store operations demo assistant. "
         f"The selected region is {selected_region}. "
         "Use the attached Databricks resources and MCP tools when answering: Genie for metrics, "
-        "StoreTime for scheduling/training evidence, OpsTask for follow-up tasks, Confluence for FY26 standards, "
-        "Inventory MCP for stockout risk, and Lakebase for memory. "
-        "When you use a tool, briefly name what evidence came from it. "
-        "Do not invent task creation; ask for approval before creating OpsTask tickets.\n\n"
+        "StoreTime for scheduling/training evidence, and OpsTask for follow-up tasks. "
+        f"{confluence_guidance}"
+        "When you use a tool, briefly name what evidence came from it.\n\n"
         f"Available tools:\n{tool_context}"
     )
     conversation = [{"role": "system", "content": system_context}]
@@ -726,28 +707,20 @@ def build_agent_messages(prompt: str, prior_messages: list[dict], selected_regio
 
 def tool_call_order(prompt: str) -> list[tuple[str, str]]:
     lowered = prompt.lower()
-    calls = [
-        ("Lakebase memory", "load selected region and demo context"),
-    ]
+    calls: list[tuple[str, str]] = []
 
-    if "tool" in lowered and "weekly" not in lowered:
+    if "tool" in lowered:
         calls.append(("MCP registry", "list available tools, status, and purpose"))
         return calls
 
-    if any(term in lowered for term in ("fy26", "goal", "standard", "weekly", "briefing", "training")):
-        calls.append(("Confluence", "retrieve FY26 goals and operating standards"))
-
-    if any(term in lowered for term in ("average", "actual", "training", "weekly", "briefing", "store", "risk")):
+    if any(term in lowered for term in ("average", "actual", "training", "store")):
         calls.append(("Genie Agent", "query governed store metrics and training performance"))
 
     if any(term in lowered for term in ("training", "schedule", "scheduling", "104", "storetime", "completion")):
         calls.append(("StoreTime", "inspect training blocks, converted hours, and coverage reasons"))
 
-    if any(term in lowered for term in ("weekly", "briefing", "inventory", "stockout", "risk")):
-        calls.append(("Inventory MCP", "check ingredient availability and stockout risk"))
-
-    if any(term in lowered for term in ("weekly", "briefing", "task", "tasks", "propose", "create")):
-        calls.append(("OpsTask", "list existing follow-ups and draft approval-gated tasks"))
+    if any(term in lowered for term in ("task", "tasks")):
+        calls.append(("OpsTask", "list existing follow-ups"))
 
     return calls
 
@@ -803,8 +776,7 @@ st.markdown(
     <div class="bb-intro">
     Bobabricks is a premium boba tea company running a store operations demo on Databricks.
     This assistant helps regional leaders inspect FY26 training goals, store execution risk,
-    scheduling evidence, and approval-gated follow-up tasks across Genie, StoreTime, OpsTask,
-    Confluence, and Lakebase.
+    and scheduling evidence across Genie, StoreTime, and OpsTask.
     </div>
     """,
     unsafe_allow_html=True,
@@ -858,15 +830,13 @@ with st.sidebar:
     if st.button("New Chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.conversation_id = str(uuid.uuid4())
-        st.session_state["pending_drafts"] = []
-        st.session_state["created_tasks"] = []
         st.rerun()
 
 examples = [
     "What tools do you have?",
     f"Show average versus actual training hours for my {selected_region} stores and flag any stores falling behind.",
+    "Why is Store 104 behind on training?",
     "What are our FY26 training goals, and how does Store 104 stack up?",
-    f"Generate my weekly {selected_region} regional risk briefing and create follow-up tasks for high-severity items.",
 ]
 
 for msg in st.session_state.messages:
@@ -939,38 +909,3 @@ if prompt:
 if st.session_state.get("tool_status"):
     with st.expander("Available tool details", expanded=True):
         st.dataframe(st.session_state["tool_status"], hide_index=True, use_container_width=True)
-
-pending_drafts = st.session_state.get("pending_drafts", [])
-if pending_drafts:
-    st.subheader("Pending OpsTask Approval")
-    st.dataframe(
-        [
-            {
-                "store_id": draft.store_id,
-                "title": draft.title,
-                "category": draft.category,
-                "severity": draft.severity,
-            }
-            for draft in pending_drafts
-        ],
-        hide_index=True,
-        use_container_width=True,
-    )
-
-    if st.button("Approve and Create OpsTask Tickets", type="primary"):
-        created_tasks = ops_tasks.create_tasks(pending_drafts)
-        st.session_state["created_tasks"] = created_tasks
-        st.session_state["pending_drafts"] = []
-        summary = "\n".join(f"- {task['task_id']}: {task['title']}" for task in created_tasks)
-        st.session_state.messages.append(
-            {"role": "assistant", "content": f"Created OpsTask tickets:\n\n{summary}"}
-        )
-        st.rerun()
-
-if st.session_state.get("created_tasks"):
-    with st.expander("Created OpsTask tickets", expanded=True):
-        st.dataframe(st.session_state["created_tasks"], hide_index=True, use_container_width=True)
-
-if st.session_state.get("existing_tasks"):
-    with st.expander("Existing OpsTask context"):
-        st.dataframe(st.session_state["existing_tasks"], hide_index=True, use_container_width=True)

@@ -5,48 +5,71 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_FILES = [
-    "BOBABRICKS_DEMO_RUNBOOK.md",
+    "script.md",
     "CODEX_UPGRADE_PROMPT.txt",
-    "BUDGET_GUARDRAIL_SCRIPT.md",
     "agent-store-ops/agent.yaml",
     "agent-store-ops/system_prompt.md",
     "agent-store-ops/mcp_servers.yaml",
     "agent-store-ops/tools.yaml",
     "agent-store-ops/policies.yaml",
-    "agent-store-ops/sample_weekly_briefing.md",
     "app/app.yaml",
     "app/app.py",
     "data/store_metrics.csv",
     "data/schedules.csv",
-    "data/inventory.csv",
     "data/confluence_playbooks.json",
     "data/ops_tasks.json",
-    "scripts/generate_sample_briefing.py",
     "app/services/store_ops.py",
     "tests/test_store_ops.py",
+    "archive/long-version/script.md",
+    "archive/long-version/BOBABRICKS_DEMO_RUNBOOK.md",
+    "archive/long-version/CODEX_UPGRADE_PROMPT.txt",
 ]
 
+# The short demo's spine: baseline (Genie, StoreTime, OpsTask) has no Confluence,
+# the Codex upgrade adds exactly one tool (managed Atlassian/Confluence MCP), and
+# Inventory MCP stays disabled. Guard against the long-version features creeping back
+# into the active demo surfaces.
 REQUIRED_TEXT = {
-    "agent-store-ops/system_prompt.md": [
-        "sales",
-        "labor",
-        "inventory",
-        "training",
-        "customer_experience",
-        "Ask for explicit approval before creating any task",
+    "CODEX_UPGRADE_PROMPT.txt": [
+        "Atlassian Confluence MCP",
+        "search_confluence",
+        "CONFLUENCE_MCP_ENABLED=true",
     ],
     "agent-store-ops/mcp_servers.yaml": [
-        "managed_atlassian_mcp",
-        "CONFLUENCE_MCP_ENABLED:-true",
-        "databricks_app_mcp",
-        "FY26 Store Operations Goals",
-        "Inventory Stockout Escalation Playbook",
+        "INVENTORY_APP_MCP_ENABLED:-false",
     ],
-    "app/app.yaml": ["Generate Weekly Regional Briefing"],
     "app/services/store_ops.py": [
         "class StoreOpsEngine",
         "class OpsTaskClient",
-        "draft_high_severity_tasks",
+    ],
+}
+
+# These strings belong to the long version only; they must NOT appear in the
+# active short-demo app surfaces.
+FORBIDDEN_TEXT = {
+    "scripts/start_app.py": [
+        "Generate Weekly Regional Briefing",
+    ],
+    "app/app.py": [
+        "Approve and Create OpsTask Tickets",
+        "Inventory MCP",
+    ],
+    "agent-store-ops/mcp_servers.yaml": [
+        "managed_atlassian_mcp",
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
+    ],
+    "agent-store-ops/tools.yaml": [
+        "search_confluence",
+    ],
+    "app/app.yaml": [
+        "Generate Weekly Regional Briefing",
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
+    ],
+    "app.yml": [
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
     ],
 }
 
@@ -62,6 +85,12 @@ def main():
         for snippet in snippets:
             if snippet not in text:
                 failures.append(f"Missing text in {relative_path}: {snippet}")
+
+    for relative_path, snippets in FORBIDDEN_TEXT.items():
+        text = (ROOT / relative_path).read_text() if (ROOT / relative_path).exists() else ""
+        for snippet in snippets:
+            if snippet in text:
+                failures.append(f"Long-version text should not appear in {relative_path}: {snippet}")
 
     if failures:
         print("Demo validation failed:")

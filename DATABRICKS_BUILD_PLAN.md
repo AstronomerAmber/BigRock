@@ -23,10 +23,9 @@ Create or confirm these Databricks resources:
 - App budget or usage policy for the guardrail demo moment.
 - Databricks App MCP named `bobabricks-storetime-mcp` backed by demo Delta schedule/training tables.
 - Databricks App MCP named `bobabricks-opstask-mcp` backed by demo Delta OpsTask tables.
-- Lakebase memory table named `bobabricks_demo.store_ops.bobabricks_agent_memory` or update `agent-store-ops/mcp_servers.yaml`.
-- Optional Databricks App MCP named `bobabricks-inventory-mcp` for the final WOW query if inventory should appear as a separate tool.
+- Optional Databricks App MCP named `bobabricks-inventory-mcp` — long version only (see `archive/long-version/`); the short demo keeps it disabled.
 
-The MCP app source lives in `mcp-apps/`. Deploy StoreTime and OpsTask before the first Databricks demo pass; deploy Inventory when you want inventory to appear as a distinct final-pass tool.
+The MCP app source lives in `mcp-apps/`. For the short demo, deploy only StoreTime and OpsTask. Deploy Inventory only when running the long version, where inventory appears as a distinct tool.
 
 ## 3. Load Demo Data
 
@@ -42,12 +41,12 @@ For a live Genie demo, expose store metrics, training, customer experience, and 
 
 ## 4. Configure External Context
 
-Keep Confluence disabled for `demo-start` by leaving `CONFLUENCE_MCP_ENABLED=false`. During the live upgrade, enable the real Databricks managed Atlassian/Confluence MCP connection used in the target environment:
+Keep Confluence absent for `demo-start`: no Confluence MCP block in `agent-store-ops/mcp_servers.yaml`, no `search_confluence` entry in `agent-store-ops/tools.yaml`, and no Confluence env in the app manifest. During the live upgrade, add the real Databricks managed Atlassian/Confluence MCP connection used in the target environment:
 
 - `CONFLUENCE_MCP_ENABLED=true`
 - `ATLASSIAN_MCP_URL`
 - `ATLASSIAN_MCP_BEARER_TOKEN` stored as a Databricks App secret named `atlassian_mcp_bearer_token`, not committed
-- Required pages from `agent-store-ops/mcp_servers.yaml`
+- Required pages added to `agent-store-ops/mcp_servers.yaml`
 
 Confirm the demo Bobabricks article/pages exist in the actual Confluence workspace:
 
@@ -135,10 +134,10 @@ Use two branches if you want the live Codex upgrade moment:
 
 ```bash
 git checkout -b demo-start
-# keep Genie, StoreTime, OpsTask, current time, and memory available
-# keep Confluence disabled and Inventory MCP inactive for the live upgrade moment
+# keep Genie, StoreTime, and OpsTask available
+# keep Confluence absent and Inventory MCP inactive for the live upgrade moment
 
 git checkout main
 git checkout -b demo-final
-# enable Confluence live; optionally enable Inventory MCP as a separate final-pass tool
+# add Confluence live; optionally enable Inventory MCP as a separate final-pass tool
 ```
