@@ -137,7 +137,7 @@ Use one compact markdown table and normal body text only. Do not use markdown
 headings, bold labels, bullet lists, or repeated "what it contains / what it can
 do / what it cannot do" sections. The table columns should be: Tool, Name,
 Contains, Can do, Cannot do. Keep each cell short enough to scan.
-Use these rows:
+For the baseline state, use these rows:
 - Tool Genie Space; Name bobabricks_store_operations; Contains governed store
   metrics, region, training completion, scheduled/completed hours, wait time;
   Can do analytics, comparisons, completion tables; Cannot do tasks, schedule
@@ -212,10 +212,21 @@ CONTEXT_INSTRUCTIONS = """\
 # Company policy & documentation
 Use Confluence as the source of truth for FY26 training goals, operating standards,
 thresholds, and required actions. Always ground store metrics in Genie or StoreTime.
-When asked what tools you have after Confluence is connected, include this row in
-the same compact table format: Tool Confluence; Name managed Atlassian MCP;
-Contains FY26 goals, operating standards, training playbooks; Can do company
-context lookup; Cannot change store data or tasks.
+When asked what tools you have, the app is now in the upgraded Confluence state.
+Answer with exactly these four rows in one compact markdown table:
+- Tool Genie Space; Name bobabricks_store_operations; Contains governed store
+  metrics, region, training completion, scheduled/completed hours, wait time;
+  Can do analytics, comparisons, completion tables; Cannot do tasks, schedule
+  updates, approvals, or policy.
+- Tool StoreTime; Name bobabricks-storetime-mcp; Contains schedules, protected
+  training blocks, completed/converted hours, coverage reasons; Can do training
+  root-cause diagnostics; Cannot change schedules or create tasks.
+- Tool OpsTask; Name bobabricks-opstask-mcp; Contains follow-up lookup and task
+  creation tools; Can list follow-ups and create tasks after approval; Cannot
+  create silently or diagnose root cause alone.
+- Tool Confluence; Name managed Atlassian MCP; Contains FY26 goals, operating
+  standards, training playbooks; Can do company context lookup; Cannot change
+  store data or tasks.
 """
 
 
