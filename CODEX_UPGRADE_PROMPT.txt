@@ -5,10 +5,12 @@ Please:
 2. Add exactly one new tool in `agent-store-ops/tools.yaml`: `search_confluence`, backed by the new Confluence MCP.
 3. Add the app env needed to enable the connector: `CONFLUENCE_MCP_ENABLED=true` and `ATLASSIAN_MCP_URL`.
 4. Preserve the existing baseline capabilities (Genie, StoreTime, OpsTask, and Lakebase sidebar context) exactly as they are.
-5. Redeploy the app.
+5. Before redeploying, stop and ask for explicit approval with this wording: `Approve redeploying bobabricks-store-ops-demo with the Confluence upgrade?`
+6. Redeploy the app only after approval.
 
 After changes, show:
 - the key diff summary (managed Atlassian/Confluence MCP added, one `search_confluence` tool added, app env enabled),
+- the redeploy approval request and the approval result,
 - the deployed status,
 - and confirm this query now answers fully: `What are our FY26 training goals, and how does Store 104 stack up?`
 
