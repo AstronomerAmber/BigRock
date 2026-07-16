@@ -4,6 +4,7 @@ import os
 import re
 from contextlib import AsyncExitStack
 from datetime import datetime
+from pathlib import Path
 from typing import Any, AsyncGenerator
 
 import httpx
@@ -108,6 +109,7 @@ ATLASSIAN_OFF_SENTINELS = {"", "off", "none", "disabled", "false"}
 ATLASSIAN_FRIENDLY_NAME = "Atlassian Confluence"
 CONFLUENCE_MCP_ENABLED = os.getenv("CONFLUENCE_MCP_ENABLED", "false").strip().lower() in {"1", "true", "on", "yes"}
 USE_SDK_MCP_SERVERS = os.getenv("USE_SDK_MCP_SERVERS", "false").strip().lower() in {"1", "true", "on", "yes"}
+CONFLUENCE_FIXTURE_PATH = Path(__file__).resolve().parents[1] / "data" / "confluence_playbooks.json"
 
 AGENT_INSTRUCTIONS = """\
 You are the Bobabricks Store Operations Agent for regional store leaders.
@@ -116,7 +118,7 @@ Use the attached tools directly:
 - Genie Space for governed Bobabricks store metrics, training completion, wait time, and regional performance.
 - StoreTime for schedules, training blocks, converted hours, and coverage reasons.
 - OpsTask for existing follow-up tickets and task tracking.
-- Confluence/Atlassian for FY26 goals, operating standards, and playbooks when the Atlassian tools are connected.
+- Confluence/Atlassian for FY26 goals, operating standards, and playbooks when Confluence is connected.
 
 Do not invent stores, metrics, targets, task ids, or policy. Keep demo answers
 natural: do not expose internal tool availability problems, missing-source
@@ -129,7 +131,7 @@ context in a clean demo style. Do not call a tool for this question. Do not use
 the phrase "Bobabricks tool inventory." Do not use "Available" or "Unavailable"
 headings. Do not add temporary-availability caveats unless the user's request is
 blocked by a failed tool call. List only the connected data and MCP tools; do not
-list Confluence/Atlassian unless the Atlassian tools are connected. Never list
+list Confluence/Atlassian unless Confluence is connected. Never list
 Lakebase memory or a current-time utility as tools.
 Use one compact markdown table and normal body text only. Do not use markdown
 headings, bold labels, bullet lists, or repeated "what it contains / what it can
@@ -388,6 +390,33 @@ def _databricks_mcp_token() -> str:
     return os.getenv("DATABRICKS_TOKEN", "")
 
 
+def _load_confluence_fixture() -> dict[str, Any]:
+    try:
+        return json.loads(CONFLUENCE_FIXTURE_PATH.read_text())
+    except Exception as exc:
+        logger.warning("Confluence fixture unavailable: %s", exc)
+        return {}
+
+
+@function_tool
+def search_confluence(query: str) -> str:
+    """Search Bobabricks Confluence context for FY26 goals, standards, and playbooks."""
+    playbooks = _load_confluence_fixture()
+    if not playbooks:
+        return json.dumps({"error": "Confluence context unavailable"})
+
+    normalized = query.strip().lower()
+    matches = {}
+    for title, body in playbooks.items():
+        haystack = f"{title} {json.dumps(body)}".lower()
+        if not normalized or any(term in haystack for term in normalized.split()):
+            matches[title] = body
+
+    if not matches:
+        matches = playbooks
+    return json.dumps(matches)
+
+
 async def build_atlassian_tools(stack: AsyncExitStack) -> tuple[list[FunctionTool], list[str]]:
     url = _atlassian_url()
     if not url:
@@ -556,11 +585,17 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             direct_tools, direct_unavailable = await build_direct_databricks_mcp_tools(stack)
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
+            context_tools = list(atlassian_tools)
+            unavailable = unavailable_tools + direct_unavailable
+            if CONFLUENCE_MCP_ENABLED and not atlassian_tools:
+                context_tools.append(search_confluence)
+            else:
+                unavailable += atlassian_unavailable
             agent = create_agent(
                 mcp_servers=mcp_servers,
-                unavailable_tools=unavailable_tools + direct_unavailable + atlassian_unavailable,
-                extra_tools=direct_tools + atlassian_tools,
-                context_tools_enabled=bool(atlassian_tools),
+                unavailable_tools=unavailable,
+                extra_tools=direct_tools + context_tools,
+                context_tools_enabled=CONFLUENCE_MCP_ENABLED,
             )
             result = await Runner.run(agent, await deduplicate_input(request, session), session=session)
         finally:
@@ -596,11 +631,17 @@ async def stream_handler(request: ResponsesAgentRequest) -> AsyncGenerator[Respo
             mcp_servers, unavailable_tools = await connect_available_mcp_servers(stack, WorkspaceClient())
             direct_tools, direct_unavailable = await build_direct_databricks_mcp_tools(stack)
             atlassian_tools, atlassian_unavailable = await build_atlassian_tools(stack)
+            context_tools = list(atlassian_tools)
+            unavailable = unavailable_tools + direct_unavailable
+            if CONFLUENCE_MCP_ENABLED and not atlassian_tools:
+                context_tools.append(search_confluence)
+            else:
+                unavailable += atlassian_unavailable
             agent = create_agent(
                 mcp_servers=mcp_servers,
-                unavailable_tools=unavailable_tools + direct_unavailable + atlassian_unavailable,
-                extra_tools=direct_tools + atlassian_tools,
-                context_tools_enabled=bool(atlassian_tools),
+                unavailable_tools=unavailable,
+                extra_tools=direct_tools + context_tools,
+                context_tools_enabled=CONFLUENCE_MCP_ENABLED,
             )
             result = Runner.run_streamed(agent, input=await deduplicate_input(request, session), session=session)
             async for event in process_agent_stream_events(result.stream_events()):
