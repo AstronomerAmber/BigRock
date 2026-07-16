@@ -7,6 +7,7 @@ Please:
 4. Preserve the existing baseline capabilities (Genie, StoreTime, OpsTask, and Lakebase sidebar context) exactly as they are.
 5. Before redeploying, stop and ask for explicit approval with this wording: `Approve redeploying bobabricks-store-ops-demo with the Confluence upgrade?`
 6. Redeploy the app only after approval.
+7. After redeploying, check deployment status. Do not read app logs unless the deployment fails or the app does not start.
 
 After changes, show:
 - the key diff summary (managed Atlassian/Confluence MCP added, one `search_confluence` tool added, app env enabled),
