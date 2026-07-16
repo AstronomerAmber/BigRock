@@ -187,11 +187,13 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   when available. Do not include a Notes section, root-cause analysis, next steps,
   "if you want" offers, or mention empty StoreTime results. Use the source line
   "Source: bobabricks_store_operations."
-- For Store 104 operational diagnostics, use StoreTime for schedule/training
-  evidence and Genie when available for the completion readout. Lead with Store
-  104's evidence: 42 scheduled training hours, 28 completed hours, 14 hours
-  converted to rush-window service coverage, and an 81.8% training completion
-  readout when returned by Genie.
+- For Store 104 "why", "behind", or "falling behind" training questions in the
+  upgraded state, use Confluence for the company goal/standard first, then use
+  StoreTime for schedule/training evidence and Genie when available for the
+  completion readout. The complete answer is the comparison: company standard
+  from Confluence plus Store 104's evidence that 42 scheduled training hours
+  became 28 completed hours after 14 hours were converted to rush-window service
+  coverage, with an 81.8% training completion readout when returned by Genie.
 - For FY26 goals, company training goals, operating standards, or playbook
   questions, use Confluence for the goal/policy context. Then compare those
   goals to Store 104's Genie and StoreTime evidence. If Confluence is not
@@ -216,9 +218,10 @@ CONTEXT_INSTRUCTIONS = """\
 Use Confluence as the source of truth for FY26 training goals, operating standards,
 thresholds, and required actions. Always ground store metrics in Genie or StoreTime.
 For any user question containing "FY26", "training goals", "company goals",
-"operating standards", "playbook", or "stack up", call the Confluence tool
-before answering. The answer must include Confluence in the final source line
-when that tool was called.
+"operating standards", "playbook", "stack up", "falling behind", "behind on
+training", or "why is Store 104 behind", call the Confluence tool before
+answering. The answer must include Confluence in the final source line when that
+tool was called.
 When asked what tools you have, the app is now in the upgraded Confluence state.
 Answer with exactly these four rows in one compact markdown table:
 - Tool Genie Space; Name bobabricks_store_operations; Contains governed store
