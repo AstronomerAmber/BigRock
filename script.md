@@ -79,7 +79,7 @@ So let's look at Store 104. It's both a scheduling problem, but it's primarily a
 
 **Transition:** So what we're going to do is go back into Omnigent, and I'm going to run omnigent codex, this is the harness that wraps Codex, OpenAI's coding agent, right inside Omnigent's terminal, and ask it for an upgrade here.
 
-**Ask Codex/Omnigent:** For the Bobabricks store operations agent, can you add our FY26 goals and store playbooks as context? Please add the Atlassian Confluence MCP so the agent can pull from Confluence directly. Before redeploying, ask me to approve the redeploy. After approval, redeploy from the repo root using `databricks apps deploy bobabricks-store-ops-demo --profile bigrock --json '{"mode":"SNAPSHOT","git_source":{"branch":"main"}}'`. Do not use `--profile DEFAULT`, do not deploy without the app name, and do not use `--source-code-path .` or deploy the `app/` directory. After redeploying, check deployment status, but do not read app logs unless the deployment fails or the app does not start.
+**Ask Codex/Omnigent:** For the Bobabricks store operations agent, can you add our FY26 goals and store playbooks as context? Please add the Atlassian Confluence MCP so the agent can pull from Confluence directly, and redeploy the app.
 
 **Say (while it works):** So it's going to start working on that for me. Before it redeploys, it should stop and ask me to approve that deployment, so I still have a human checkpoint before this changes the running app. That's what's really nice about using Databricks Apps as a backend, it's actually really quick to spin up an app, and it's also really quick to modify and redeploy, so it makes your development cycle much easier. Let's let it work and come back.
 
