@@ -388,6 +388,64 @@ def _make_function_tool(client: DirectMcpClient, meta: dict[str, Any]) -> Functi
     )
 
 
+def _make_confluence_search_tool(client: DirectMcpClient, tool_metas: list[dict[str, Any]]) -> FunctionTool:
+    search_tool = next(
+        (
+            str(meta.get("name"))
+            for meta in tool_metas
+            if str(meta.get("name", "")).lower() == "search_confluence_pages"
+        ),
+        None,
+    )
+    if search_tool is None:
+        search_tool = next(
+            (
+                str(meta.get("name"))
+                for meta in tool_metas
+                if "search" in str(meta.get("name", "")).lower()
+            ),
+            "",
+        )
+
+    async def _invoke(ctx: RunContextWrapper, args_json: str) -> str:
+        try:
+            args = json.loads(args_json) if args_json else {}
+        except Exception:
+            args = {}
+
+        query = str(args.get("query", "")).strip()
+        limit = int(args.get("limit", 5) or 5)
+        if not search_tool:
+            return "Tool error (search_confluence): Atlassian Confluence MCP did not expose a search tool."
+        try:
+            return await client.call_tool(search_tool, {"query": query, "limit": limit})
+        except Exception as exc:
+            return f"Tool error (search_confluence): {type(exc).__name__}: {exc}"
+
+    return FunctionTool(
+        name="search_confluence",
+        description="Search Atlassian Confluence for Bobabricks FY26 goals, operating standards, and store playbooks.",
+        params_json_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search text for FY26 goals, training standards, or store playbooks.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of Confluence results to return.",
+                    "default": 5,
+                },
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
+        on_invoke_tool=_invoke,
+        strict_json_schema=False,
+    )
+
+
 def _atlassian_token() -> str:
     try:
         headers = get_request_headers() or {}
@@ -454,7 +512,7 @@ async def build_atlassian_tools(stack: AsyncExitStack) -> tuple[list[FunctionToo
         return [], [ATLASSIAN_FRIENDLY_NAME]
     try:
         client = await stack.enter_async_context(DirectMcpClient(url, token))
-        return [_make_function_tool(client, meta) for meta in await client.list_tools()], []
+        return [_make_confluence_search_tool(client, await client.list_tools())], []
     except Exception as exc:
         logger.warning("Atlassian MCP unavailable; running without it. (%s)", exc)
         return [], [ATLASSIAN_FRIENDLY_NAME]

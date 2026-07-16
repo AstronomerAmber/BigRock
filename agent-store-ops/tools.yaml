@@ -14,6 +14,11 @@ tools:
     purpose: Find existing operational tickets for a store or issue.
     read_only: true
 
+  - name: search_confluence
+    server: atlassian_confluence
+    purpose: Search FY26 goals, operating standards, and store playbooks in Confluence.
+    read_only: true
+
   - name: create_ops_task
     server: ops_task
     purpose: Create follow-up tickets for approved high-severity risks.
