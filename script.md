@@ -31,7 +31,7 @@ Now let's open up Databricks Apps here and click on my Bobabricks agent here. [o
 So what I'm going to do is go ahead and ask it, really quickly, what tools do you have? We'll see what it started out with.
 
 **Expected response, agent lists:**
-- Genie Agent (store operations data)
+- Genie Space (store operations data)
 - StoreTime (labor and scheduling)
 - OpsTask (tickets and task tracking)
 
@@ -45,7 +45,7 @@ So what I'm going to do is go ahead and ask it, really quickly, what tools do yo
 
 **What happens:** Agent queries the Genie Agent.
 
-**Expected result:** A named store (e.g., Store 104) comes back behind on training, with a short table or bullet summary.
+**Expected result:** Store 104 / Seattle Pike Place is flagged as falling behind, with regional scheduled and completed training-hour averages.
 
 **Say:** So for Bobabricks, we have some training goals we want to meet this year, we want to make sure our employees are staying up to date with everything they should be doing. It's going to first query my Genie space here, so I didn't have to build out this UI, but you can customize it. I can see I do have a store falling behind, it was able to reach out to Genie, run that query for me, and return and format that response.
 
@@ -53,11 +53,11 @@ So what I'm going to do is go ahead and ask it, really quickly, what tools do yo
 
 ## Step 3: Diagnostic Follow-Up
 
-**Ask the agent:** Why is Store 104 behind on training? Is it a scheduling problem or a completion problem?
+**Ask the agent:** Why is Store 104 behind on training?
 
-**What happens:** Agent uses StoreTime, possibly OpsTask, potentially in parallel.
+**What happens:** Agent uses StoreTime. It may call both schedule inspection and training-event lookup.
 
-**Expected result:** Something like, Store 104 scheduled the training shifts, but those shifts got converted to service coverage during rush windows.
+**Expected result:** Store 104 scheduled the training shifts, but 14 hours got converted to service coverage during rush windows, leaving 28 of 42 scheduled hours completed.
 
 **Say:** Since I have that custom MCP, I'm able to query my scheduling system, so you can see it's going to get a store schedule summary, that way I'm really able to dig in deep with the data I already have and the tools already included here.
 
