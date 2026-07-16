@@ -13,6 +13,8 @@ REQUIRED_FILES = [
     "agent-store-ops/tools.yaml",
     "agent-store-ops/policies.yaml",
     "app/app.yaml",
+    "app.yaml",
+    "app.yml",
     "app/app.py",
     "data/store_metrics.csv",
     "data/schedules.csv",
@@ -68,6 +70,10 @@ FORBIDDEN_TEXT = {
         "ATLASSIAN_MCP_URL",
     ],
     "app.yml": [
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
+    ],
+    "app.yaml": [
         "CONFLUENCE_MCP_ENABLED",
         "ATLASSIAN_MCP_URL",
     ],

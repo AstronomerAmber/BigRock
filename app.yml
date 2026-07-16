@@ -1,7 +1,4 @@
-command:
-  - python
-  - -m
-  - scripts.start_app
+command: ["python", "-m", "scripts.start_app"]
 
 env:
   - name: CHAT_APP_PORT
