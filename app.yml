@@ -43,7 +43,3 @@ env:
     value: bobabricks-opstask-mcp
   - name: OPSTASK_MCP_URL
     value: https://bobabricks-opstask-mcp-2847375137997282.aws.databricksapps.com/mcp
-  - name: CONFLUENCE_MCP_ENABLED
-    value: "true"
-  - name: ATLASSIAN_MCP_URL
-    value: https://data-ai-lakehouse.cloud.databricks.com/ai-gateway/mcp-services/system.ai.atlassian?o=2847375137997282

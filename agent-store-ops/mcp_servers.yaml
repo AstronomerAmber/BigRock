@@ -29,24 +29,6 @@ mcp_servers:
       tables:
         ops_tasks: ${DATABRICKS_CATALOG:-bobabricks_demo}.${DATABRICKS_SCHEMA:-store_ops}.ops_tasks
 
-  confluence:
-    type: managed_atlassian_mcp
-    enabled: ${CONFLUENCE_MCP_ENABLED:-true}
-    description: FY26 goals, operating playbooks, and store procedures.
-    config:
-      server_url: ${ATLASSIAN_MCP_URL}
-      http_headers:
-        Authorization: Bearer ${ATLASSIAN_MCP_BEARER_TOKEN}
-      spaces:
-        - "~7120205a9b4c00e0154b0694abeb4e6b2c89bb"
-      required_pages:
-        - Bobabricks — FY26 Store Operations Goals & Operating Standards
-        - Training Completion Operating Standard
-      required_page_urls:
-        - https://databricks.atlassian.net/wiki/x/gACwhwE
-    notes: >-
-      Added by the short-demo upgrade so the agent can retrieve company goals and operating playbooks through the managed Atlassian MCP.
-
   inventory_app:
     type: databricks_app_mcp
     enabled: ${INVENTORY_APP_MCP_ENABLED:-false}
