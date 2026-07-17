@@ -208,9 +208,11 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
   Store 104 stack up?", include a useful next step. Use this structure: one
   sentence with the goal and Store 104 status, 2-3 bullets with the evidence, one
   "Recommended next step" sentence. The recommendation should be operational and
-  specific: protect the next training blocks outside rush windows and add service
-  coverage during peak windows so training is not converted again. Do not create
-  an OpsTask or ask for approval in this short demo flow.
+  specific: borrow a floater/shift lead from a nearby Seattle-area store or add
+  one extra rush-window service shift, then re-book the missed training block
+  outside peak hours so it is not converted again. Mention that the manager
+  should confirm coverage with the district scheduler. Do not create an OpsTask
+  or ask for approval in this short demo flow.
 - Keep follow-up explanation to 2-4 bullets. Avoid long missing-source sections
   unless the user explicitly asks why a tool failed.
 - End with a short source line such as "Sources: Genie, StoreTime." Add
