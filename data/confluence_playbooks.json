@@ -7,8 +7,8 @@
   "Training Completion Operating Standard": {
     "guidance": "Protected training shifts should not be converted to service coverage except during approved emergency coverage windows.",
     "peak_coverage_fallback_options": [
-      "Borrow coverage from a nearby store by asking the district scheduler to move a floater, shift lead, or cross-trained partner from a nearby store for the rush window.",
-      "Add a dedicated rush-window service shift so the training-coded partner can stay in training.",
+      "Use the StoreTime district schedule and partner availability view to identify an available cross-trained partner or shift lead from a nearby store, then ask the district scheduler to assign that coverage for the rush window.",
+      "Schedule an additional rush-window floor coverage shift in StoreTime so the training-coded partner can stay in training.",
       "If coverage still cannot be secured, rebook the training block to a lower-demand window in the same week and mark the original conversion reason.",
       "Escalate repeat misses if training utilization remains below 90% or the store is two or more weeks behind target."
     ]
