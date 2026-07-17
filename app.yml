@@ -43,7 +43,3 @@ env:
     value: bobabricks-opstask-mcp
   - name: OPSTASK_MCP_URL
     value: https://bobabricks-opstask-mcp-2847375137997282.aws.databricksapps.com/mcp
-  - name: CONFLUENCE_MCP_ENABLED
-    value: "true"
-  - name: ATLASSIAN_MCP_URL
-    value: https://dbc-a5d4177a-49dc.cloud.databricks.com/api/2.0/mcp/connections/confluence-mcp

@@ -38,21 +38,7 @@ REQUIRED_TEXT = {
         "CONFLUENCE_MCP_ENABLED=true",
     ],
     "agent-store-ops/mcp_servers.yaml": [
-        "managed_atlassian_mcp",
-        "CONFLUENCE_MCP_ENABLED",
-        "ATLASSIAN_MCP_URL",
         "INVENTORY_APP_MCP_ENABLED:-false",
-    ],
-    "agent-store-ops/tools.yaml": [
-        "search_confluence",
-    ],
-    "app.yaml": [
-        "CONFLUENCE_MCP_ENABLED",
-        "ATLASSIAN_MCP_URL",
-    ],
-    "app/app.yaml": [
-        "CONFLUENCE_MCP_ENABLED",
-        "ATLASSIAN_MCP_URL",
     ],
     "app/services/store_ops.py": [
         "class StoreOpsEngine",
@@ -71,13 +57,23 @@ FORBIDDEN_TEXT = {
         "Inventory MCP",
     ],
     "agent-store-ops/mcp_servers.yaml": [
+        "managed_atlassian_mcp",
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
     ],
     "agent-store-ops/tools.yaml": [
+        "search_confluence",
     ],
     "app/app.yaml": [
         "Generate Weekly Regional Briefing",
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
     ],
     "app.yml": [
+        "CONFLUENCE_MCP_ENABLED",
+        "ATLASSIAN_MCP_URL",
+    ],
+    "app.yaml": [
         "CONFLUENCE_MCP_ENABLED",
         "ATLASSIAN_MCP_URL",
     ],
