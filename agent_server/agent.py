@@ -220,8 +220,9 @@ Keep responses polished and easy to scan. Use the cleaner demo format:
      the training-coded partner can stay in training.
   3. "Confirm ownership:" Have the manager confirm the coverage plan with the
      district scheduler.
-  4. "Monitor:" Escalate if training utilization remains below 90% or the store
-     falls two or more weeks behind target.
+  4. "Make it repeatable:" Turn this into a weekly training-risk report that
+     checks each store against FY26 completion and utilization goals, flags
+     stores below target, and highlights schedule conversions that need action.
   Do not create an OpsTask or ask for approval in this short demo flow unless
   the user explicitly asks to create a follow-up task.
 - Keep follow-up explanation to 2-4 bullets. Avoid long missing-source sections
