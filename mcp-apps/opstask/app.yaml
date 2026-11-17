@@ -6,7 +6,7 @@ command:
 
 env:
   - name: DATABRICKS_WAREHOUSE_ID
-    value: 0bf53eaf9b66d1fd
+    value: 8561deb2ea8d55c9
   - name: DATABRICKS_CATALOG
     value: bobabricks_demo
   - name: DATABRICKS_SCHEMA
